@@ -1086,6 +1086,7 @@ async function renderOxigeno() {
     <div class="tabs" id="gas-tabs">
       <button class="tab-btn active" onclick="gasTab('ronda06')">🕕 Ronda 06:00</button>
       <button class="tab-btn" onclick="gasTab('tubos')">🔵 Movimiento tubos</button>
+      <button class="tab-btn" onclick="gasTab('pedidoprov')">📋 Tubos entregados por empresa</button>
       <button class="tab-btn" onclick="gasTab('carga')">🚚 Carga de tanque</button>
       <button class="tab-btn" onclick="gasTab('stock')">📦 Stock actual</button>
     </div>
@@ -1100,8 +1101,130 @@ function gasTab(tab) {
   const c = document.getElementById('gas-content');
   if (tab === 'ronda06') renderGasRonda06(c);
   else if (tab === 'tubos') renderGasTubos(c);
+  else if (tab === 'pedidoprov') renderGasPedidoProv(c);
   else if (tab === 'carga') renderGasCarga(c);
   else if (tab === 'stock') renderGasStock(c);
+}
+
+
+// ── PEDIDO A PROVEEDOR DE GASES ──────────────────────────────
+function renderGasPedidoProv(c) {
+  c.innerHTML = `
+    <div id="gas-msg"></div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">📋 Registrar tubos entregados por empresa</div>
+        <div class="alert alert-info mb-16">Registrar los tubos que entregó la empresa proveedora. Permite comparar con el conteo diario y tener el número real de stock.</div>
+        <div class="form-group">
+          <label class="form-label">Proveedor *</label>
+          <input id="pp-proveedor" type="text" value="CASCIA" placeholder="Nombre del proveedor">
+        </div>
+        <div style="border-top:1px solid var(--border);margin:14px 0;padding-top:14px">
+          <div class="card-title" style="margin-bottom:12px">Tubos solicitados / recibidos</div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">Oxígeno medicinal</label>
+              <input id="pp-ox" type="number" placeholder="Cantidad" min="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Oxígeno transporte</label>
+              <input id="pp-trans" type="number" placeholder="Cantidad" min="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Aire comprimido</label>
+              <input id="pp-aire" type="number" placeholder="Cantidad" min="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">CO2</label>
+              <input id="pp-co2" type="number" placeholder="Cantidad" min="0">
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tipo de registro</label>
+          <select id="pp-tipo">
+            <option value="Pedido enviado">📤 Pedido enviado a la empresa</option>
+            <option value="Tubos recibidos">📥 Tubos entregados por la empresa</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">N° de remito / referencia</label>
+          <input id="pp-remito" type="text" placeholder="Si tienen número de remito o pedido">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Observaciones</label>
+          <input id="pp-obs" type="text" placeholder="Observaciones adicionales">
+        </div>
+        <button class="btn btn-primary" onclick="guardarPedidoProv()">💾 Registrar</button>
+      </div>
+      <div class="card" id="pp-historial">
+        <div class="card-title">Últimos registros de entrega</div>
+        <div class="text-muted">Cargando...</div>
+      </div>
+    </div>`;
+  cargarHistorialPedidoProv();
+}
+
+async function guardarPedidoProv() {
+  const proveedor = document.getElementById('pp-proveedor').value.trim();
+  const ox = document.getElementById('pp-ox').value || 0;
+  const trans = document.getElementById('pp-trans').value || 0;
+  const aire = document.getElementById('pp-aire').value || 0;
+  const co2 = document.getElementById('pp-co2').value || 0;
+
+  if (!proveedor) { mostrarGasMsg('warning','⚠ Ingresar el nombre del proveedor.'); return; }
+  if (!ox && !trans && !aire && !co2) { mostrarGasMsg('warning','⚠ Ingresar al menos una cantidad.'); return; }
+
+  const btn = document.querySelector("button[onclick='guardarPedidoProv()']");
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+
+  const res = await api({
+    action: 'registrarPedidoProvGas',
+    operario: state.nombre,
+    proveedor,
+    tipo: document.getElementById('pp-tipo').value,
+    oxMedicinal: ox,
+    oxTransporte: trans,
+    airComprimido: aire,
+    co2,
+    remito: document.getElementById('pp-remito').value,
+    observaciones: document.getElementById('pp-obs').value,
+  });
+
+  if (btn) { btn.disabled = false; btn.innerHTML = '💾 Registrar'; }
+
+  if (res && res.ok !== false) {
+    mostrarGasMsg('success', '✓ Registro guardado correctamente.');
+    ['pp-ox','pp-trans','pp-aire','pp-co2','pp-remito','pp-obs'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    cargarHistorialPedidoProv();
+  } else {
+    mostrarGasMsg('danger', '✗ Error: ' + (res?.error || 'verificar conexión'));
+  }
+}
+
+async function cargarHistorialPedidoProv() {
+  const el = document.getElementById('pp-historial');
+  if (!el) return;
+  const data = await api({ action: 'getPedidosProvGas' });
+  const items = Array.isArray(data) ? data.slice(-10).reverse() : [];
+  el.innerHTML = '<div class="card-title">Últimos registros de entrega</div>' +
+    (items.length === 0 ? '<div class="text-muted">Sin registros aún.</div>' :
+    items.map(r => `
+      <div style="padding:9px 0;border-bottom:1px solid rgba(45,125,210,.08)">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:3px">
+          <strong>${r.Fecha||""}</strong> ${r.Hora||""} · ${r.Tipo||""} · ${r.Proveedor||""} · ${r.Operario||""}
+          ${r.Remito ? ' · Remito: '+r.Remito : ''}
+        </div>
+        <div style="font-size:13px;display:flex;gap:16px;flex-wrap:wrap">
+          ${parseInt(r.OxMedicinal)>0 ? `<span>🟢 O₂ medicinal: <strong>${r.OxMedicinal}</strong></span>` : ""}
+          ${parseInt(r.OxTransporte)>0 ? `<span>🔵 O₂ transporte: <strong>${r.OxTransporte}</strong></span>` : ""}
+          ${parseInt(r.AireComprimido)>0 ? `<span>🟡 Aire: <strong>${r.AireComprimido}</strong></span>` : ""}
+          ${parseInt(r.CO2)>0 ? `<span>⚪ CO2: <strong>${r.CO2}</strong></span>` : ""}
+        </div>
+        ${r.Observaciones ? `<div style="font-size:11px;color:var(--text2);margin-top:2px">${r.Observaciones}</div>` : ""}
+      </div>`).join(''));
 }
 
 // ── RONDA 06:00 ──────────────────────────────────────────────
@@ -1143,6 +1266,12 @@ function renderGasRonda06(c) {
       </div>
 
       <div class="form-group">
+        <label class="form-label">Tubos oxígeno en batería de soporte (20 bocas)</label>
+        <input id="g-tbateria" type="number" placeholder="Cantidad actual en batería" min="0" max="20">
+        <div style="font-size:11px;color:var(--text2);margin-top:3px">Capacidad máxima: 20 tubos. Registrar cuántos están conectados actualmente.</div>
+      </div>
+
+      <div class="form-group">
         <label class="form-label">Observaciones</label>
         <textarea id="g-obs" placeholder="Anomalías observadas, novedades del área de gases..."></textarea>
       </div>
@@ -1165,11 +1294,13 @@ async function guardarRonda06() {
   const btn = document.querySelector("button[onclick='guardarRonda06()']");
   if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
 
+  const bateria = document.getElementById('g-tbateria').value || 0;
   const res = await api({
     action: 'registrarRondaGas',
     operario: state.nombre,
     nivelTanque: nivel,
     stockTubos: JSON.stringify(stock),
+    bateriaSoporte: bateria,
     observaciones: document.getElementById('g-obs').value,
   });
 
@@ -1203,7 +1334,7 @@ async function guardarRonda06() {
       mostrarGasMsg('success', '✓ Ronda 06:00 registrada correctamente. Stock dentro de los mínimos.');
     }
     // Limpiar campos
-    ['g-nivel','g-tox','g-taire','g-tco2','g-ttrans','g-obs'].forEach(id => {
+    ['g-nivel','g-tox','g-taire','g-tco2','g-ttrans','g-tbateria','g-obs'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
@@ -1592,7 +1723,7 @@ async function renderDashboard() {
     if (deOperarios.length > 0) {
       html += `<div class="novedad-strip">
         <div class="novedad-strip-title">📝 Últimas novedades de turno</div>
-        ${deOperarios.map(n=>`<div class="novedad-row">• [${n.Turno||''}] ${n.Operario||''}: ${n.Novedad||''}</div>`).join("")}
+        ${deOperarios.map(n=>`<div class="novedad-row">• <strong>${n.Fecha||''}</strong> [${n.Turno||''}] ${n.Operario||''}: ${n.Novedad||''}</div>`).join("")}
       </div>`;
     }
 
@@ -2186,6 +2317,7 @@ async function cargarNovedades() {
     novedadesData
       .filter(n => n.Fecha === hoy)
       .forEach(n => items.push({
+        fecha: n.Fecha || "",
         hora: n.Hora || "",
         turno: n.Turno || "",
         operario: n.Operario || "",
@@ -2202,6 +2334,7 @@ async function cargarNovedades() {
       .forEach(p => {
         const horaCierre = p.FechaCierre ? p.FechaCierre.split(" ")[1] || "" : "";
         items.push({
+          fecha: hoy,
           hora: horaCierre,
           turno: "",
           operario: p.OperarioAsignado || "",
@@ -2240,7 +2373,7 @@ async function cargarNovedades() {
       : items.map(n => `
         <div style="padding:9px 0; border-bottom:1px solid rgba(45,125,210,.08);">
           <div style="font-size:11px;color:var(--text3);margin-bottom:3px">
-            ${n.icono} ${n.hora} ${n.turno ? "· " + n.turno : ""} · <strong style="color:var(--text2)">${n.operario}</strong> · <em>${n.tipo}</em>
+            ${n.icono} <strong style="color:var(--text2)">${n.fecha||""}</strong> ${n.hora} ${n.turno ? "· " + n.turno : ""} · <strong style="color:var(--text2)">${n.operario}</strong> · <em>${n.tipo}</em>
           </div>
           <div style="font-size:13px">${n.texto}</div>
         </div>`).join(""));
