@@ -356,7 +356,7 @@ tr:hover td { background: rgba(45,125,210,.05); }
 // ═══════════════════════════════════════════════════════════
 // CONFIG — REEMPLAZAR CON TU URL DE GOOGLE APPS SCRIPT
 // ═══════════════════════════════════════════════════════════
-const API_URL = "https://script.google.com/macros/s/AKfycbxZ8Wvejxz7fHE3Vpfim-p1M8M-QT4n_slhfaHgduSTJP_h7xvkPsPRSpOeVYYjRNOS/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbx_YEl7wyjRCX3i180f6KjupUQ8Pr3Bd8kL86l800wClzqToMPlmVxnQSEaGAszq6ry/exec";
 
 // Todos los PINs se validan contra Google Sheets — no hay PINs hardcodeados
 const PINS_DEMO = {}; // vacío — toda validación va al servidor
@@ -369,12 +369,22 @@ let state = {
   charts: {},
 };
 
+// ── DATE HELPERS ─────────────────────────────────────────────
+function fechaHoy() {
+  // Siempre retorna dd/MM/yyyy con ceros — igual al formato que guarda el servidor
+  const now = new Date();
+  const d = String(now.getDate()).padStart(2,'0');
+  const m = String(now.getMonth()+1).padStart(2,'0');
+  const y = now.getFullYear();
+  return d+'/'+m+'/'+y;
+}
+
 // ── CLOCK ────────────────────────────────────────────────────
 function startClock() {
   function tick() {
     const now = new Date();
     document.getElementById("clock").textContent =
-      now.toLocaleDateString("es-AR") + " " + now.toLocaleTimeString("es-AR", {hour:"2-digit",minute:"2-digit"});
+      fechaHoy() + " " + now.toLocaleTimeString("es-AR", {hour:"2-digit",minute:"2-digit"});
   }
   tick(); setInterval(tick, 10000);
 }
@@ -528,37 +538,17 @@ function registrarServiceWorker() {
   if (notif_swRegistered || !("serviceWorker" in navigator)) return;
   notif_swRegistered = true;
 
-  const swCode = `
-    self.addEventListener('message', (e) => {
-      if (e.data && e.data.type === 'NOTIFY') {
-        self.registration.showNotification(e.data.title, {
-          body: e.data.body,
-          icon: e.data.icon || '',
-          tag: 'pedido-nuevo',
-          requireInteraction: e.data.urgente || false,
-          vibrate: e.data.urgente ? [200,100,200,100,200] : [200],
-          data: { url: e.data.url || '/' }
-        });
-      }
-    });
-    self.addEventListener('notificationclick', (e) => {
-      e.notification.close();
-      e.waitUntil(clients.openWindow(e.notification.data.url || '/'));
-    });
-    // Polling en background cada 60 segundos
-    self.addEventListener('periodicsync', () => {});
-  `;
-
-  const blob = new Blob([swCode], { type:"application/javascript" });
-  const swUrl = URL.createObjectURL(blob);
-
-  navigator.serviceWorker.register(swUrl, { scope:"/" })
+  // Registrar sw.js externo (archivo en la raíz del repositorio)
+  navigator.serviceWorker.register("/mantenimiento-sanatorio/sw.js", { scope: "/mantenimiento-sanatorio/" })
     .then(reg => {
-      console.log("Service Worker registrado");
-      // Guardar registro para enviar mensajes desde la app
+      console.log("Service Worker registrado correctamente");
       window._swReg = reg;
+      // Escuchar mensajes del SW
+      navigator.serviceWorker.addEventListener("message", e => {
+        if (e.data && e.data.type === "CHECK_PEDIDOS") checkNuevosPedidos();
+      });
     })
-    .catch(e => console.warn("SW error:", e));
+    .catch(e => console.warn("SW no disponible:", e));
 }
 
 // ── API ──────────────────────────────────────────────────────
@@ -657,6 +647,28 @@ function launchApp() {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.getVoices();
     window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+  }
+  // Avisar al SW que empiece a hacer polling en background
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: "START_POLLING",
+      apiUrl: API_URL,
+      lastIds: []
+    });
+  }
+  // Escuchar mensajes del SW (pedidos nuevos detectados en background)
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', e => {
+      if (e.data && e.data.type === "NUEVO_PEDIDO") {
+        const p = e.data.pedido;
+        reproducirSonido(p.Urgencia === "Alta");
+        mostrarNotificacionVisual(
+          "Nuevo pedido de " + (p.Servicio||"") + ": " + (p.Descripcion||"").substring(0,60),
+          p.Urgencia
+        );
+        actualizarBadge((parseInt(document.getElementById("badge-pedidos")?.textContent)||0)+1);
+      }
+    });
   }
   navigate("dashboard");
 }
@@ -1069,10 +1081,10 @@ function mostrarMsgSupPedido(tipo, texto) {
 
 // ── GESTIÓN DE GASES ─────────────────────────────────────────
 const STOCK_MINIMO = {
-  "Oxígeno medicinal": 12,
-  "Aire comprimido": 2,
+  "Oxígeno medicinal": 6,
+  "Aire comprimido": 3,
   "CO2": 2,
-  "Oxígeno transporte (camillero)": 8,
+  "Oxígeno transporte (camillero)": 3,
 };
 const EMAIL_CASCIA = "rodrigo.rivas@casciagases.com.ar";
 const EMAIL_RESPUESTA = "mantenimiento@sanatoriosanjose.org.ar";
@@ -1448,7 +1460,7 @@ async function cargarHistorialTubos() {
   const el = document.getElementById('tubos-historial');
   if (!el) return;
   const data = await api({ action: 'getMovTubos' });
-  const hoy = new Date().toLocaleDateString('es-AR');
+  const hoy = fechaHoy();
   const items = Array.isArray(data) ? data.filter(d => d.Fecha === hoy).slice(-10).reverse() : [];
   const iconMov = { ingreso:'📥', egreso:'📤', entrega:'🚑' };
   el.innerHTML = '<div class="card-title">Últimos movimientos del día</div>' +
@@ -2243,7 +2255,7 @@ async function enviarTrabajoPropioForm() {
 // ── NOVEDADES ────────────────────────────────────────────────
 async function renderNovedades() {
   const turnoActual = getTurnoActual();
-  const hoy = new Date().toLocaleDateString("es-AR");
+  const hoy = fechaHoy();
   document.getElementById("content").innerHTML = `
     <div class="section-header">
       <div><div class="section-title">Novedades de turno</div><div class="section-sub">Turno actual: <strong>${turnoActual}</strong> · ${hoy}</div></div>
@@ -2302,7 +2314,7 @@ async function cargarNovedades() {
   if (!lista) return;
   lista.innerHTML = `<div class="card-title">Novedades del día — todos los turnos</div><div class="text-muted" style="font-size:13px">Cargando...</div>`;
 
-  const hoy = new Date().toLocaleDateString("es-AR"); // dd/mm/yyyy
+  const hoy = fechaHoy(); // dd/mm/yyyy
 
   // Cargar novedades manuales y pedidos cerrados hoy en paralelo
   const [novedadesData, pedidosData] = await Promise.all([
