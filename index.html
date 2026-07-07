@@ -2323,6 +2323,12 @@ async function cargarNovedades() {
     api({ action:"getPedidos" })
   ]);
 
+  // Debug: mostrar fechas que vienen del servidor
+  if (Array.isArray(novedadesData) && novedadesData.length > 0) {
+    console.log("[Novedades] Total registros:", novedadesData.length);
+    console.log("[Novedades] Últimas fechas:", novedadesData.slice(-3).map(n => JSON.stringify({f: n.Fecha, h: n.Hora, t: n.Turno})));
+  }
+
   const items = [];
 
   // Novedades manuales de hoy
