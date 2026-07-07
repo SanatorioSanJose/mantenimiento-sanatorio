@@ -371,12 +371,49 @@ let state = {
 
 // ── DATE HELPERS ─────────────────────────────────────────────
 function fechaHoy() {
-  // Siempre retorna dd/MM/yyyy con ceros — igual al formato que guarda el servidor
+  // Siempre retorna dd/MM/yyyy con ceros
   const now = new Date();
   const d = String(now.getDate()).padStart(2,'0');
   const m = String(now.getMonth()+1).padStart(2,'0');
   const y = now.getFullYear();
   return d+'/'+m+'/'+y;
+}
+
+function normalizarFecha(valor) {
+  // Convierte cualquier formato de fecha a dd/MM/yyyy
+  if (!valor) return "";
+  const s = String(valor).trim();
+  // Ya está en formato dd/MM/yyyy
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+  // Formato ISO: 2026-07-07T03:00:00.000Z
+  if (s.includes('T') || s.includes('-')) {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      // Usar fecha local Argentina (UTC-3)
+      const local = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
+      const dd = String(local.getUTCDate()).padStart(2,'0');
+      const mm = String(local.getUTCMonth()+1).padStart(2,'0');
+      const yyyy = local.getUTCFullYear();
+      return dd+'/'+mm+'/'+yyyy;
+    }
+  }
+  return s;
+}
+
+function normalizarHora(valor) {
+  // Convierte cualquier formato de hora a HH:mm
+  if (!valor) return "";
+  const s = String(valor).trim();
+  if (/^\d{2}:\d{2}$/.test(s)) return s;
+  if (s.includes('T') || s.includes('1899')) {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      const hh = String(d.getUTCHours()).padStart(2,'0');
+      const min = String(d.getUTCMinutes()).padStart(2,'0');
+      return hh+':'+min;
+    }
+  }
+  return s;
 }
 
 // ── CLOCK ────────────────────────────────────────────────────
@@ -1717,7 +1754,9 @@ async function renderDashboard() {
       }
       return true;
     }).slice(-3).reverse();
-    const deOperarios = novedades.filter(n => n.Turno !== "Jefe de Mantenimiento").slice(-3).reverse();
+    const deOperarios = novedades
+      .filter(n => n.Turno !== "Jefe de Mantenimiento" && normalizarFecha(n.Fecha) === fechaHoy())
+      .slice(-3).reverse();
     let html = "";
 
     if (deSuper.length > 0) {
@@ -2334,10 +2373,10 @@ async function cargarNovedades() {
   // Novedades manuales de hoy
   if (Array.isArray(novedadesData)) {
     novedadesData
-      .filter(n => (n.Fecha||"").trim() === hoy)
+      .filter(n => normalizarFecha(n.Fecha) === hoy)
       .forEach(n => items.push({
-        fecha: n.Fecha || "",
-        hora: n.Hora || "",
+        fecha: normalizarFecha(n.Fecha),
+        hora: normalizarHora(n.Hora),
         turno: n.Turno || "",
         operario: n.Operario || "",
         texto: n.Novedad || "",
