@@ -2314,7 +2314,8 @@ async function cargarNovedades() {
   if (!lista) return;
   lista.innerHTML = `<div class="card-title">Novedades del día — todos los turnos</div><div class="text-muted" style="font-size:13px">Cargando...</div>`;
 
-  const hoy = fechaHoy(); // dd/mm/yyyy
+  const hoy = fechaHoy(); // dd/MM/yyyy
+  console.log("[Novedades] Fecha hoy:", hoy);
 
   // Cargar novedades manuales y pedidos cerrados hoy en paralelo
   const [novedadesData, pedidosData] = await Promise.all([
@@ -2327,7 +2328,7 @@ async function cargarNovedades() {
   // Novedades manuales de hoy
   if (Array.isArray(novedadesData)) {
     novedadesData
-      .filter(n => n.Fecha === hoy)
+      .filter(n => (n.Fecha||"").trim() === hoy)
       .forEach(n => items.push({
         fecha: n.Fecha || "",
         hora: n.Hora || "",
@@ -2342,7 +2343,7 @@ async function cargarNovedades() {
   // Pedidos cerrados hoy — se agregan automáticamente como novedad
   if (Array.isArray(pedidosData)) {
     pedidosData
-      .filter(p => p.Estado === "Resuelto" && p.FechaCierre && p.FechaCierre.startsWith(hoy.split("/").reverse().join("/") ) )
+      .filter(p => p.Estado === "Resuelto" && p.FechaCierre && (p.Fecha||"").trim() === hoy)
       .forEach(p => {
         const horaCierre = p.FechaCierre ? p.FechaCierre.split(" ")[1] || "" : "";
         items.push({
@@ -2360,7 +2361,7 @@ async function cargarNovedades() {
   // También pedidos por fecha en formato dd/mm/yyyy
   if (Array.isArray(pedidosData)) {
     pedidosData
-      .filter(p => p.Estado === "Resuelto" && p.Fecha === hoy)
+      .filter(p => p.Estado === "Resuelto" && (p.Fecha||"").trim() === hoy)
       .forEach(p => {
         const yaAgregado = items.some(i => i.texto && i.texto.includes(p.Descripcion || "___"));
         if (!yaAgregado) {
