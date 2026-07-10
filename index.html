@@ -267,6 +267,10 @@ tr:hover td { background: rgba(45,125,210,.05); }
   from { transform: translateX(120%); opacity:0; }
   to   { transform: translateX(0);    opacity:1; }
 }
+@keyframes slideUp {
+  from { transform: translateX(-50%) translateY(20px); opacity:0; }
+  to   { transform: translateX(-50%) translateY(0);    opacity:1; }
+}
 
 /* ── MISC ── */
 .sep { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
@@ -867,10 +871,48 @@ function badgeClass(estado) {
 }
 
 function showAlert(type, msg, container="content") {
-  const el = document.createElement("div");
-  el.className = `alert alert-${type}`; el.textContent = msg;
-  const c = document.getElementById(container) || document.getElementById("content");
-  c.prepend(el); setTimeout(() => el.remove(), 4000);
+  // Mostrar como toast flotante fijo en la pantalla
+  const existing = document.getElementById("toast-alert");
+  if (existing) existing.remove();
+
+  const toast = document.createElement("div");
+  toast.id = "toast-alert";
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    min-width: 280px;
+    max-width: 90vw;
+    padding: 14px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: var(--font);
+    font-weight: 500;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    animation: slideUp 0.3s ease;
+  `;
+
+  const colors = {
+    success: { bg:"#27ae60", color:"#fff" },
+    warning: { bg:"#f39c12", color:"#000" },
+    danger:  { bg:"#e74c3c", color:"#fff" },
+    info:    { bg:"#2d7dd2", color:"#fff" },
+  };
+  const c = colors[type] || colors.info;
+  toast.style.background = c.bg;
+  toast.style.color = c.color;
+  toast.innerHTML = msg;
+
+  document.body.appendChild(toast);
+  const duration = type === "danger" ? 6000 : type === "warning" ? 5000 : 4000;
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transition = "opacity 0.3s";
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
 }
 
 // ── TABLERO SUPERVISOR ───────────────────────────────────────
@@ -1811,7 +1853,7 @@ function drawCharts(stats) {
 
   // Rondas
   const ctx4 = document.getElementById("chart-rondas");
-  const rondasTotal = 37; // total items del checklist
+  const rondasTotal = stats.rondasTotal || 37;
   const rondasHoy = stats.rondasHoy || 0;
   const pct = Math.min(100, Math.round(rondasHoy / rondasTotal * 100));
   if(ctx4) new Chart(ctx4, { type:"doughnut",
@@ -2448,49 +2490,35 @@ function getTurnoActual() {
 function renderRonda() {
   const RONDAS_ITEMS = [
     { seccion:"1. Salas de máquinas y tablero eléctrico", items:[
-      {n:1,sector:"Sala de Máquinas — SANCHEZ DE BUSTAMANTE",tarea:"Verificar funcionamiento general (ruidos, vibraciones, alarmas)"},
-      {n:2,sector:"Sala de Máquinas — SANCHEZ DE BUSTAMANTE",tarea:"Control temperatura ambiente y ventilación"},
-      {n:3,sector:"Sala de Máquinas — SANCHEZ DE BUSTAMANTE",tarea:"Verificar pérdidas (agua, aceite, gas)"},
-      {n:4,sector:"Sala de Máquinas — BILLINGHURST",tarea:"Verificar funcionamiento general"},
-      {n:5,sector:"Sala de Máquinas — BILLINGHURST",tarea:"Control temperatura ambiente y ventilación"},
-      {n:6,sector:"Sala de Máquinas — BILLINGHURST",tarea:"Verificar pérdidas (agua, aceite, gas)"},
-      {n:7,sector:"Sala de Máquinas — GÜEMES",tarea:"Verificar funcionamiento general"},
-      {n:8,sector:"Sala de Máquinas — GÜEMES",tarea:"Control temperatura ambiente y ventilación"},
-      {n:9,sector:"Sala de Máquinas — GÜEMES",tarea:"Verificar pérdidas (agua, aceite, gas)"},
-      {n:10,sector:"Tablero Eléctrico Principal",tarea:"Verificar estado general (indicadores, térmicas, disyuntores)"},
-      {n:11,sector:"Tablero Eléctrico Principal",tarea:"Control temperatura (calor excesivo, olor a quemado)"},
-      {n:12,sector:"Tablero Eléctrico Principal",tarea:"Verificar ausencia de humedad o condensación"},
+      {n:1,sector:"Sala de Máquinas — SANCHEZ DE BUSTAMANTE",tarea:"Verificar funcionamiento general, ausencia de pérdidas y anomalías"},
+      {n:2,sector:"Sala de Máquinas — BILLINGHURST",tarea:"Verificar funcionamiento general, ausencia de pérdidas y anomalías"},
+      {n:3,sector:"Sala de Máquinas — GÜEMES",tarea:"Verificar funcionamiento general, ausencia de pérdidas y anomalías"},
+      {n:4,sector:"Tablero Eléctrico — Subsuelo",tarea:"Verificar estado general (indicadores, térmicas, temperatura, ausencia de humedad)"},
     ]},
     { seccion:"2. Terraza — SANCHEZ DE BUSTAMANTE y BILLINGHURST", items:[
-      {n:1,sector:"Terraza SdB/Bili — Tanques de agua",tarea:"Verificar nivel visual y ausencia de pérdidas"},
-      {n:2,sector:"Terraza SdB/Bili — Tanques de agua",tarea:"Inspeccionar tapas, sellos y estructuras"},
-      {n:3,sector:"Terraza SdB/Bili — Sistema de vacío",tarea:"Verificar funcionamiento y ausencia de alarmas"},
-      {n:4,sector:"Terraza SdB/Bili — Sistema de vacío",tarea:"Control visual conexiones y tuberías"},
-      {n:5,sector:"Terraza SdB/Bili — Sala máq. ascensores",tarea:"Verificar funcionamiento de maquinaria de ascensores"},
-      {n:6,sector:"Terraza SdB/Bili — Sala máq. ascensores",tarea:"Control temperatura y ventilación"},
-      {n:7,sector:"Terraza SdB/Bili — Cañerías de agua",tarea:"Inspección visual cañerías expuestas (sin pérdidas)"},
-      {n:8,sector:"Terraza SdB/Bili — Estado general",tarea:"Estado terraza (acumulación agua, desagües libres)"},
+      {n:1,sector:"Terraza SdB/Bili — Tanques de agua",tarea:"Verificar nivel, tapas, sellos y ausencia de pérdidas"},
+      {n:2,sector:"Terraza SdB/Bili — Sistema de vacío",tarea:"Verificar funcionamiento, alarmas y estado de conexiones"},
+      {n:3,sector:"Terraza SdB/Bili — Sala máq. ascensores",tarea:"Verificar funcionamiento de maquinaria, temperatura y ventilación"},
+      {n:4,sector:"Terraza SdB/Bili — Cañerías y estado general",tarea:"Inspección visual cañerías, desagües y estado general de la terraza"},
     ]},
     { seccion:"3. Terraza — GÜEMES", items:[
-      {n:1,sector:"Terraza GÜEMES — Tanques de agua",tarea:"Verificar nivel visual y ausencia de pérdidas"},
-      {n:2,sector:"Terraza GÜEMES — Tanques de agua",tarea:"Inspeccionar tapas, sellos y estructuras"},
-      {n:3,sector:"Terraza GÜEMES — Cañerías de agua",tarea:"Inspección visual cañerías (sin pérdidas ni humedad)"},
-      {n:4,sector:"Terraza GÜEMES — Estado general",tarea:"Estado terraza (desagües libres, sin obstáculos)"},
-      {n:5,sector:"Terraza GÜEMES — Equipos varios",tarea:"Control visual equipos instalados"},
+      {n:1,sector:"Terraza GÜEMES — Sala máq. ascensores",tarea:"Verificar funcionamiento de maquinaria de ascensores"},
+      {n:2,sector:"Terraza GÜEMES — Tanques de agua",tarea:"Verificar nivel, tapas, sellos y ausencia de pérdidas"},
     ]},
-    { seccion:"4. Sectores comunes — Ingresos y salas de espera (solo días hábiles, desde 05:30 h)", items:[
-      {n:1,sector:"Ingreso SANCHEZ DE BUSTAMANTE",tarea:"Funcionamiento puertas automáticas (apertura/cierre, sensores)"},
-      {n:2,sector:"Ingreso SANCHEZ DE BUSTAMANTE",tarea:"Control iluminación general (sin parpadeos)"},
-      {n:3,sector:"Ingreso SANCHEZ DE BUSTAMANTE",tarea:"Inspección paredes y cielorrasos (humedad, desprendimientos)"},
-      {n:4,sector:"Ingreso SANCHEZ DE BUSTAMANTE",tarea:"Estado general de presentación"},
-      {n:5,sector:"Ingreso BILLINGHURST",tarea:"Funcionamiento puertas automáticas"},
-      {n:6,sector:"Ingreso BILLINGHURST",tarea:"Control iluminación general"},
-      {n:7,sector:"Ingreso BILLINGHURST",tarea:"Inspección paredes y cielorrasos"},
-      {n:8,sector:"Ingreso BILLINGHURST",tarea:"Estado general de presentación"},
-      {n:9,sector:"Ingreso GÜEMES",tarea:"Funcionamiento picaporte/puerta de ingreso"},
-      {n:10,sector:"Ingreso GÜEMES",tarea:"Control iluminación general"},
-      {n:11,sector:"Ingreso GÜEMES",tarea:"Inspección paredes y cielorrasos"},
-      {n:12,sector:"Ingreso GÜEMES",tarea:"Estado general de presentación"},
+    { seccion:"4. Patio BILLINGHURST — Inspección exterior", items:[
+      {n:1,sector:"Patio Billinghurst — Tanque cisterna",tarea:"Verificar nivel, tapas, sellos y ausencia de pérdidas en la base"},
+      {n:2,sector:"Patio Billinghurst — Unidades exteriores AA",tarea:"Control visual y funcionamiento de unidades exteriores de aire acondicionado"},
+      {n:3,sector:"Patio Billinghurst — Estado general",tarea:"Estado general del patio (desagües libres, sin obstáculos)"},
+    ]},
+    { seccion:"5. Patio SANCHEZ DE BUSTAMANTE — Inspección exterior", items:[
+      {n:1,sector:"Patio SdB — Tanque",tarea:"Verificar nivel, tapas, sellos y ausencia de pérdidas"},
+      {n:2,sector:"Patio SdB — Sistema LCI",tarea:"Inspección visual sistema de Lucha Contra Incendio (cañerías, válvulas, anomalías)"},
+      {n:3,sector:"Patio SdB — Cámaras de inspección",tarea:"Verificar estado de cámaras de inspección (tapas, acceso, sin obstrucciones)"},
+      {n:4,sector:"Patio SdB — Estado general",tarea:"Estado general del patio (desagües libres, sin obstáculos)"},
+    ]},
+    { seccion:"6. Sectores comunes — Ingresos (solo días hábiles, desde 05:30 h)", items:[
+      {n:1,sector:"Ingresos SdB y BILLINGHURST",tarea:"Funcionamiento puertas automáticas, iluminación y estado general de presentación"},
+      {n:2,sector:"Ingreso GÜEMES",tarea:"Estado de puerta de ingreso, iluminación y presentación general"},
     ]},
   ];
 
