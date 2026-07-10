@@ -1160,10 +1160,10 @@ function mostrarMsgSupPedido(tipo, texto) {
 
 // ── GESTIÓN DE GASES ─────────────────────────────────────────
 const STOCK_MINIMO = {
-  "Oxígeno medicinal": 6,
+  "Oxígeno medicinal": 12,
   "Aire comprimido": 3,
   "CO2": 2,
-  "Oxígeno transporte (camillero)": 3,
+  "Oxígeno transporte (camillero)": 7,
 };
 const EMAIL_CASCIA = "rodrigo.rivas@casciagases.com.ar";
 const EMAIL_RESPUESTA = "mantenimiento@sanatoriosanjose.org.ar";
@@ -1708,7 +1708,14 @@ async function renderGasStock(c) {
             '<th style="text-align:center;padding:8px 6px;font-size:11px;color:var(--text2);text-transform:uppercase">Mínimo</th>' +
             '<th style="text-align:center;padding:8px 6px;font-size:11px;color:var(--text2);text-transform:uppercase">Estado</th>' +
           '</tr></thead>' +
-          '<tbody>' + filasStock + '</tbody>' +
+          '<tbody>' + filasStock +
+          '<tr style="border-top:2px solid rgba(45,125,210,.2)">' +
+            '<td style="padding:10px 6px"><strong>Batería de soporte (20 bocas)</strong><div style="font-size:11px;color:var(--text2)">Último conteo ronda 06:00</div></td>' +
+            '<td style="text-align:center;font-family:var(--mono);font-size:18px;padding:10px 6px;color:var(--cyan)">' + (data.bateriaSoporte !== undefined ? data.bateriaSoporte : "—") + '</td>' +
+            '<td style="text-align:center;font-family:var(--mono);padding:10px 6px;color:var(--text2)">20</td>' +
+            '<td style="text-align:center;padding:10px 6px"><span class="badge ' + (parseInt(data.bateriaSoporte) >= 20 ? 'badge-done' : parseInt(data.bateriaSoporte) > 0 ? 'badge-warning' : 'badge-info') + '">' + (data.bateriaSoporte !== undefined ? (parseInt(data.bateriaSoporte) >= 20 ? 'Completa' : 'Parcial') : 'Sin datos') + '</span></td>' +
+          '</tr>' +
+          '</tbody>' +
         '</table>' +
       '</div>' +
       '<div class="card" id="gas-historial-rondas">' +
@@ -1765,6 +1772,8 @@ async function renderDashboard() {
 
   const stats = await api({ action:"getDashboardStats" });
   const novedades = await api({ action:"getNovedades" });
+
+  console.log("[Dashboard] Stats:", JSON.stringify(stats));
 
   // Stats
   if (stats && stats.ok !== false) {
