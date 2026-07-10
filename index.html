@@ -2061,7 +2061,7 @@ function renderFilaCola(activos) {
         <tr>
           <td class="text-mono" style="font-size:10px">${p.ID}</td>
           <td style="font-size:11px">${p.Servicio||""}</td>
-          <td style="font-size:11px">${(p.(p.Solicitante||"")</td>
+          <td style="font-size:11px">${p.Solicitante||""}</td>
           <td style="font-size:12px">${p.Descripcion||""}</td>
           <td style="text-align:center"><span class="badge ${badgeClass(p.Urgencia)}" style="font-size:9px;padding:2px 5px">${(p.Urgencia||"").substring(0,1)}</span></td>
           <td style="text-align:center"><span class="badge ${badgeClass(p.Estado)}" style="font-size:9px;padding:2px 4px;white-space:nowrap">${p.Estado==="Pendiente"?"Pend.":p.Estado==="En curso"?"Curso":p.Estado==="Resuelto"?"OK":p.Estado||""}</span></td>
