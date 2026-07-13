@@ -2537,6 +2537,14 @@ async function cargarNovedades() {
   // Ordenar por hora
   items.sort((a, b) => (b.hora || "").localeCompare(a.hora || ""));
 
+  const leyenda = items.length > 0 ? `
+    <div style="margin-top:14px;padding:10px 14px;border-radius:6px;background:var(--navy3);border-left:3px solid var(--cyan)">
+      <div style="font-size:11px;color:var(--text2)">
+        📋 Se muestran las últimas novedades y trabajos cerrados del día.
+        El registro completo de todas las intervenciones está disponible para el Jefe de Mantenimiento.
+      </div>
+    </div>` : "";
+
   lista.innerHTML = `<div class="card-title">Novedades del día — todos los turnos</div>` +
     (items.length === 0
       ? `<div class="text-muted" style="font-size:13px">Sin novedades registradas hoy.</div>`
@@ -2546,7 +2554,7 @@ async function cargarNovedades() {
             ${n.icono} <strong style="color:var(--text2)">${n.fecha||""}</strong> ${n.hora} ${n.turno ? "· " + n.turno : ""} · <strong style="color:var(--text2)">${n.operario}</strong> · <em>${n.tipo}</em>
           </div>
           <div style="font-size:13px">${n.texto}</div>
-        </div>`).join(""));
+        </div>`).join("") + leyenda);
 }
 
 function getTurnoActual() {
