@@ -360,7 +360,7 @@ tr:hover td { background: rgba(100,85,60,.06); }
 // ═══════════════════════════════════════════════════════════
 // CONFIG — REEMPLAZAR CON TU URL DE GOOGLE APPS SCRIPT
 // ═══════════════════════════════════════════════════════════
-const API_URL = "https://script.google.com/macros/s/AKfycbykKSCNTe1tDPlEAyT-zLyVGmhI3l2S-D-wEI8_yaO2ISTDlJo31T9DOVu0dwczsIC0/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxqJo9NHY_VoeLtImrdDaFL6KRKK4xt0MkfF2HRhT2zcHe-jju-RMPApmTKyyUY6NkJ/exec";
 
 // Todos los PINs se validan contra Google Sheets — no hay PINs hardcodeados
 const PINS_DEMO = {}; // vacío — toda validación va al servidor
@@ -1756,16 +1756,20 @@ async function renderDashboard() {
   c.innerHTML = `
     <div class="section-header"><div><div class="section-title">Dashboard</div><div class="section-sub">Resumen operativo — hoy</div></div></div>
     <div class="grid-4 mb-16" id="stats-chips">
-      <div class="stat-chip"><div class="stat-num" id="s-total">—</div><div class="stat-label">Total pedidos</div></div>
+      <div class="stat-chip" style="border-left:3px solid var(--cyan)">
+        <div class="stat-num" style="color:var(--cyan)" id="s-intervenciones">—</div>
+        <div class="stat-label">Total intervenciones</div>
+        <div style="font-size:10px;color:var(--text2);margin-top:2px" id="s-desglose">— pedidos + — propios</div>
+      </div>
       <div class="stat-chip"><div class="stat-num" style="color:var(--amber)" id="s-pend">—</div><div class="stat-label">Pendientes</div></div>
       <div class="stat-chip"><div class="stat-num" style="color:var(--blue)" id="s-enc">—</div><div class="stat-label">En curso</div></div>
       <div class="stat-chip"><div class="stat-num" style="color:var(--green)" id="s-res">—</div><div class="stat-label">Resueltos</div></div>
     </div>
     <div class="charts-row">
       <div class="chart-box"><div class="card-title">Estado de pedidos</div><canvas id="chart-estado"></canvas></div>
-      <div class="chart-box"><div class="card-title">Urgencia</div><canvas id="chart-urgencia"></canvas></div>
       <div class="chart-box"><div class="card-title">Carga por operario</div><canvas id="chart-operario"></canvas></div>
       <div class="chart-box"><div class="card-title">Rondas hoy</div><canvas id="chart-rondas"></canvas></div>
+      <div class="chart-box"><div class="card-title">Urgencia</div><canvas id="chart-urgencia"></canvas></div>
     </div>
     <div id="novedades-strip"></div>
   `;
@@ -1777,7 +1781,11 @@ async function renderDashboard() {
 
   // Stats
   if (stats && stats.ok !== false) {
-    document.getElementById("s-total").textContent = stats.total || 0;
+    const totalInt = stats.totalIntervenciones || stats.total || 0;
+    const totalProp = stats.totalPropios || 0;
+    const totalPed = stats.total || 0;
+    document.getElementById("s-intervenciones").textContent = totalInt;
+    document.getElementById("s-desglose").textContent = totalPed + " pedidos + " + totalProp + " propios";
     document.getElementById("s-pend").textContent = stats.pendientes || 0;
     document.getElementById("s-enc").textContent = stats.enCurso || 0;
     document.getElementById("s-res").textContent = stats.resueltos || 0;
@@ -1785,6 +1793,7 @@ async function renderDashboard() {
   } else {
     // Demo data
     drawCharts({ total:12, pendientes:4, enCurso:3, resueltos:5,
+      totalPropios:8, totalIntervenciones:20,
       porUrgencia:{Alta:3, Media:6, Baja:3},
       porOperario:{"García":5, "Martínez":4, "Pérez":3},
       rondasHoy:18 });
@@ -1840,11 +1849,32 @@ function drawCharts(stats) {
   };
   const COLORS = ["#2d7dd2","#f39c12","#27ae60","#e74c3c","#0fb8c9","#9b59b6"];
 
-  // Estado
+  // Estado — pedidos vs propios
   const ctx1 = document.getElementById("chart-estado");
+  const totalPedidos = stats.total || 0;
+  const totalPropios = stats.totalPropios || 0;
   if(ctx1) new Chart(ctx1, { type:"doughnut",
-    data:{ labels:["Pendientes","En curso","Resueltos"], datasets:[{ data:[stats.pendientes||0, stats.enCurso||0, stats.resueltos||0], backgroundColor:["#f39c12","#2d7dd2","#27ae60"], borderWidth:0 }] },
-    options:{...chartOpts} });
+    data:{
+      labels:["Cola de pedidos","Trabajos propios","Pendientes","En curso"],
+      datasets:[{
+        data:[
+          (stats.resueltos||0),
+          totalPropios,
+          (stats.pendientes||0),
+          (stats.enCurso||0)
+        ],
+        backgroundColor:["#27ae60","#0fb8c9","#f39c12","#2d7dd2"],
+        borderWidth:0
+      }]
+    },
+    options:{
+      ...chartOpts,
+      plugins:{
+        ...chartOpts.plugins,
+        tooltip:{ callbacks:{ label: ctx => ctx.label + ": " + ctx.raw + " trabajos" } }
+      }
+    }
+  });
 
   // Urgencia
   const ctx2 = document.getElementById("chart-urgencia");
@@ -2509,7 +2539,12 @@ function getTurnoActual() {
 }
 
 // ── RONDA ────────────────────────────────────────────────────
-function renderRonda() {
+async function renderRonda() {
+  // Cargar rondas ya registradas hoy para pre-tildar
+  document.getElementById("content").innerHTML = '<div class="text-muted" style="padding:20px">Cargando estado de rondas del día...</div>';
+  const rondasData = await api({ action:"getRondasHoy" });
+  window._rondasHoy = Array.isArray(rondasData) ? rondasData : [];
+
   const RONDAS_ITEMS = [
     { seccion:"1. Salas de máquinas y tablero eléctrico", items:[
       {n:1,sector:"Sala de Máquinas — SANCHEZ DE BUSTAMANTE",tarea:"Verificar funcionamiento general, ausencia de pérdidas y anomalías"},
@@ -2555,13 +2590,14 @@ function renderRonda() {
     <div class="section-header">
       <div><div class="section-title">Registro de ronda</div><div class="section-sub">Turno: ${getTurnoActual()} · Operario: ${state.nombre}</div></div>
     </div>
-    <div class="alert alert-info mb-16">⚠ El personal de turno noche realiza una ronda completa por guardia. Días hábiles: una ronda por turno. Sectores comunes (sección 4) solo a partir de las 05:30 del primer día hábil.</div>
+    <div class="alert alert-info mb-16">⚠ Los ítems ya registrados hoy aparecen pre-marcados. Completá los que faltan y guardá parcial o completo.</div>
     ${RONDAS_ITEMS.map((sec, si) => `
       <div class="ronda-section">
         <div class="ronda-section-title">${sec.seccion}</div>
         ${sec.items.map((item, ii) => `
           <div class="ronda-item">
-            <input type="checkbox" id="ri-${si}-${ii}" onchange="updateRondaItem(${si},${ii})">
+            <input type="checkbox" id="ri-${si}-${ii}" onchange="updateRondaItem(${si},${ii})"
+              ${window._rondasHoy && window._rondasHoy.some(r => r.Sector && r.Sector.includes(item.sector.substring(0,15))) ? "checked" : ""}>
             <div style="font-size:12px"><strong style="font-size:11px;color:var(--text2)">${item.sector}</strong><br>${item.tarea}</div>
             <select id="rs-${si}-${ii}" class="ronda-result" style="font-size:12px;padding:5px 8px">
               <option value="">— resultado —</option>
