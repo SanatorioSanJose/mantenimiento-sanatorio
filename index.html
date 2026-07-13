@@ -2048,37 +2048,41 @@ function renderFilaCola(activos) {
     ? `<div class="alert alert-info">No hay pedidos que coincidan con los filtros aplicados.</div>`
     : `<div class="tbl-wrap"><table>
       <thead><tr>
-        <th style="width:90px">ID</th>
-        <th style="width:90px">Servicio</th>
-        <th style="width:80px">Solicitante</th>
         <th>Descripción</th>
-        <th style="width:60px;text-align:center">Urg.</th>
-        <th style="width:70px;text-align:center">Estado</th>
+        <th style="width:80px">Solicitante</th>
+        <th style="width:44px;text-align:center">Urg.</th>
+        <th style="width:80px;text-align:center">Acción</th>
         <th style="width:80px">Asignado</th>
-        <th style="width:90px">Acciones</th>
+        <th style="width:70px">N° Pedido</th>
       </tr></thead>
       <tbody>${activos.map(p=>`
         <tr>
-          <td class="text-mono" style="font-size:10px">${p.ID}</td>
-          <td style="font-size:11px">${p.Servicio||""}</td>
+          <td>
+            <div style="font-size:12px">${p.Descripcion||""}</div>
+            <div style="font-size:10px;color:var(--text2);margin-top:2px">${p.Servicio||""}</div>
+          </td>
           <td style="font-size:11px">${p.Solicitante||""}</td>
-          <td style="font-size:12px">${p.Descripcion||""}</td>
-          <td style="text-align:center"><span class="badge ${badgeClass(p.Urgencia)}" style="font-size:9px;padding:2px 5px">${(p.Urgencia||"").substring(0,1)}</span></td>
-          <td style="text-align:center"><span class="badge ${badgeClass(p.Estado)}" style="font-size:9px;padding:2px 4px;white-space:nowrap">${p.Estado==="Pendiente"?"Pend.":p.Estado==="En curso"?"Curso":p.Estado==="Resuelto"?"OK":p.Estado||""}</span></td>
-          <td style="font-size:11px">${p.OperarioAsignado||"—"}</td>
-          <td style="white-space:nowrap">
-            <button class="btn btn-ghost" style="font-size:10px;padding:3px 6px;margin-bottom:3px;width:100%"
+          <td style="text-align:center;vertical-align:middle">
+            <span class="badge ${badgeClass(p.Urgencia)}" style="font-size:9px;padding:2px 5px;display:block;margin-bottom:3px">${(p.Urgencia||"").substring(0,1)}</span>
+            <span class="badge ${badgeClass(p.Estado)}" style="font-size:9px;padding:2px 4px;white-space:nowrap;display:block">${p.Estado==="Pendiente"?"⏳":p.Estado==="En curso"?"▶":"✓"}</span>
+          </td>
+          <td style="text-align:center;white-space:nowrap;vertical-align:middle">
+            <button style="background:none;border:none;font-size:16px;cursor:pointer;padding:2px"
               onclick="leerPedido('${p.Servicio||""}','${(p.Descripcion||"").replace(/'/g,"").substring(0,120)}','${p.Urgencia||""}')"
-              title="Escuchar pedido">🔊</button>
+              title="Escuchar">🔊</button>
+            <div style="margin-top:3px">
             ${p.Estado==="Pendiente" ? `
-              <button class="btn btn-primary" style="font-size:10px;padding:3px 7px" onclick="asumir('${p.ID}')">Asumir</button>
-              <button class="btn btn-danger" style="font-size:10px;padding:3px 5px;margin-top:2px" onclick="rechazarPedidoModal('${p.ID}','${(p.Descripcion||"").substring(0,30)}')">⚠</button>
+              <button class="btn btn-primary" style="font-size:10px;padding:3px 8px;display:block;width:100%;margin-bottom:2px" onclick="asumir('${p.ID}')">Asumir</button>
+              <button class="btn btn-danger" style="font-size:9px;padding:2px 6px;display:block;width:100%" onclick="rechazarPedidoModal('${p.ID}','${(p.Descripcion||"").substring(0,30)}')">⚠ S/Cap</button>
             ` : ""}
             ${p.Estado==="En curso" ? `
-              <button class="btn btn-success" style="font-size:10px;padding:3px 7px" onclick="cerrarPedidoModal('${p.ID}')">Cerrar</button>
-              <button class="btn btn-ghost" style="font-size:10px;padding:3px 5px;margin-top:2px" onclick="observacionModal('${p.ID}')">📝</button>
+              <button class="btn btn-success" style="font-size:10px;padding:3px 8px;display:block;width:100%;margin-bottom:2px" onclick="cerrarPedidoModal('${p.ID}')">✓ Cerrar</button>
+              <button class="btn btn-ghost" style="font-size:9px;padding:2px 6px;display:block;width:100%" onclick="observacionModal('${p.ID}')">📝 Obs.</button>
             ` : ""}
+            </div>
           </td>
+          <td style="font-size:11px">${p.OperarioAsignado||"—"}</td>
+          <td class="text-mono" style="font-size:9px;color:var(--text2)">${p.ID}</td>
         </tr>`).join("")}
       </tbody></table></div>`;
 }
