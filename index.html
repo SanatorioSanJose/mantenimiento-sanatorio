@@ -2756,6 +2756,148 @@ async function renderProveedores() {
       </tbody></table></div>`;
 }
 
+// ── OBLEAS ────────────────────────────────────────────────────
+async function renderObleas() {
+  document.getElementById("content").innerHTML = `
+    <div class="section-header"><div class="section-title">Obleas, vencimientos y certificados</div></div>
+    <div class="alert alert-warning mb-16">⚠ Las obleas AGC vencen el <strong>31/12</strong> de cada año. Plazo de renovación: hasta el <strong>31/03</strong> del año siguiente.</div>
+    <div id="obleas-table"><div class="text-muted">Cargando...</div></div>`;
+
+  const data = await api({ action:"getObleas" });
+  const items = Array.isArray(data) && data.length>0 ? data : [
+    {Item:"Ascensores",Empresa:"CULMEN SRL",FechaVencimiento:"31/12/2025",Estado:"VENCIDA",Observaciones:"Gestor presentado — verificar identidad antes de autorizar"},
+    {Item:"Instalaciones Fijas Lucha Contra Incendio",Empresa:"MATAFUEGOS LUGANO SRL",FechaVencimiento:"31/12/2025",Estado:"VENCIDA",Observaciones:"Renovar antes 31/03"},
+    {Item:"Calderas",Empresa:"A confirmar",FechaVencimiento:"31/12/2025",Estado:"VENCIDA",Observaciones:"Sin empresa conservadora registrada"},
+    {Item:"Tanques de agua",Empresa:"A confirmar",FechaVencimiento:"31/12/2025",Estado:"VENCIDA",Observaciones:"Sin empresa conservadora registrada"},
+    {Item:"Campana de extracción (cocina)",Empresa:"A confirmar",FechaVencimiento:"31/12/2025",Estado:"VENCIDA",Observaciones:""},
+    {Item:"Fachada",Empresa:"A confirmar",FechaVencimiento:"31/12/2025",Estado:"VENCIDA",Observaciones:""},
+    {Item:"Certificado hidráulico AUTOCLAVE",Empresa:"FRATECNO",FechaVencimiento:"Pendiente",Estado:"SIN REGISTRO",Observaciones:"Gestionar estudio urgente"},
+    {Item:"Certificado hidráulico CALDERA",Empresa:"A confirmar",FechaVencimiento:"Pendiente",Estado:"SIN REGISTRO",Observaciones:"Gestionar estudio urgente"},
+    {Item:"Certificación toma a tierra",Empresa:"A confirmar",FechaVencimiento:"Pendiente",Estado:"SIN REGISTRO",Observaciones:""},
+    {Item:"Carga de fuego",Empresa:"A confirmar",FechaVencimiento:"Pendiente",Estado:"SIN REGISTRO",Observaciones:""},
+    {Item:"Simulacro de evacuación",Empresa:"A confirmar",FechaVencimiento:"Pendiente",Estado:"SIN REGISTRO",Observaciones:"Obligatorio según CCT y normativa CABA"},
+  ];
+
+  document.getElementById("obleas-table").innerHTML = `
+    <div class="card"><div class="tbl-wrap"><table>
+      <thead><tr><th>Ítem</th><th>Empresa</th><th>Vencimiento</th><th>Estado</th><th>Observaciones</th></tr></thead>
+      <tbody>${items.map(o=>{
+        return `<tr>
+          <td><strong>${o.Item}</strong></td>
+          <td style="font-size:12px">${o.Empresa||"—"}</td>
+          <td style="font-size:12px;font-family:var(--mono)">${o.FechaVencimiento||"—"}</td>
+          <td><span class="badge ${o.Estado==="VENCIDA"?"badge-urgent":o.Estado==="SIN REGISTRO"?"badge-pending":"badge-done"}">${o.Estado}</span></td>
+          <td style="font-size:12px;color:var(--text2)">${o.Observaciones||"—"}</td>
+        </tr>`;}).join("")}
+      </tbody></table></div></div>`;
+}
+
+// ── SERVICIOS ADMIN ───────────────────────────────────────────
+async function renderServiciosAdmin() {
+  document.getElementById("content").innerHTML = `
+    <div class="section-header">
+      <div><div class="section-title">Servicios del sanatorio y PINs de acceso</div>
+      <div class="section-sub">Para modificar, agregar o quitar servicios y PINs, acceder directamente a la hoja Servicios en Google Sheets.</div></div>
+    </div>
+    <div class="alert alert-info mb-16">Los PINs se gestionan desde Google Sheets. Este listado es de solo lectura.</div>
+    <div id="servicios-table"><div class="text-muted">Cargando...</div></div>`;
+
+  const data = await api({ action:"getServicios" });
+  const servicios = Array.isArray(data) && data.length>0 ? data : [
+    {PIN:"10001",NombreServicio:"Guardia",Sector:"Urgencias",Estado:"Activo"},
+    {PIN:"10002",NombreServicio:"Enfermería Planta Baja",Sector:"Internación",Estado:"Activo"},
+  ];
+
+  document.getElementById("servicios-table").innerHTML = `
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>PIN</th><th>Servicio</th><th>Sector</th><th>Estado</th></tr></thead>
+      <tbody>${servicios.map(s=>`<tr>
+        <td class="text-mono" style="font-size:15px;letter-spacing:.15em">${s.PIN}</td>
+        <td><strong>${s.NombreServicio}</strong></td>
+        <td>${s.Sector||""}</td>
+        <td><span class="badge ${s.Estado==="Activo"?"badge-done":"badge-off"}">${s.Estado}</span></td>
+      </tr>`).join("")}</tbody>
+    </table></div>`;
+}
+
+// ── REQUERIMIENTOS ADMIN ──────────────────────────────────────
+async function renderReqPersonalAdmin() {
+  document.getElementById("content").innerHTML = `
+    <div class="section-header"><div class="section-title">Solicitudes del personal</div></div>
+    <div id="req-admin-table"><div class="text-muted">Cargando...</div></div>`;
+
+  const data = await api({ action:"getRequerimientos" });
+  const items = Array.isArray(data) ? data : [];
+  document.getElementById("req-admin-table").innerHTML = items.length===0
+    ? `<div class="text-muted">No hay solicitudes pendientes.</div>`
+    : `<div class="tbl-wrap"><table>
+      <thead><tr><th>Fecha</th><th>Operario</th><th>Tipo</th><th>Desde</th><th>Hasta</th><th>Detalle</th><th>Estado</th><th>Acción</th></tr></thead>
+      <tbody>${items.map(r=>`<tr>
+        <td style="font-size:12px">${r.Fecha||""}</td>
+        <td>${r.Operario||""}</td>
+        <td><span class="badge badge-info">${r.Tipo||""}</span></td>
+        <td style="font-size:12px">${r.FechaDesde||""}</td>
+        <td style="font-size:12px">${r.FechaHasta||""}</td>
+        <td style="font-size:12px;max-width:160px">${r.Detalle||""}</td>
+        <td><span class="badge ${r.Estado==="Aprobado"?"badge-done":r.Estado==="Rechazado"?"badge-urgent":"badge-pending"}">${r.Estado}</span></td>
+        <td>${r.Estado==="Pendiente" && state.role !== "director" ?`<button class='btn btn-success btn-sm' onclick="respReq('${r.ID}','Aprobado')">✓</button> <button class='btn btn-danger btn-sm' onclick="respReq('${r.ID}','Rechazado')">✗</button>`:"—"}</td>
+      </tr>`).join("")}</tbody></table></div>`;
+}
+
+// ── REQUERIMIENTOS PERSONAL ───────────────────────────────────
+function renderRequerimientosPersonal() {
+  document.getElementById("content").innerHTML = `
+    <div class="section-header"><div class="section-title">Mis solicitudes</div></div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Nueva solicitud</div>
+        <div class="form-group"><label class="form-label">Tipo *</label>
+          <select id="req-tipo">
+            <option value="Ausencia">Ausencia / enfermedad</option>
+            <option value="Vacaciones">Solicitud de vacaciones</option>
+            <option value="Cambio de guardia">Cambio de guardia</option>
+            <option value="Licencia">Licencia especial</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Fecha desde</label><input id="req-desde" type="date"></div>
+        <div class="form-group"><label class="form-label">Fecha hasta</label><input id="req-hasta" type="date"></div>
+        <div class="form-group"><label class="form-label">Detalle / motivo</label><textarea id="req-detalle" placeholder="Describir el motivo..."></textarea></div>
+        <button class="btn btn-primary" onclick="enviarRequerimiento()">📋 Enviar solicitud</button>
+      </div>
+      <div class="card" id="mis-reqs">
+        <div class="card-title">Mis solicitudes enviadas</div>
+        <div class="text-muted">Cargando...</div>
+      </div>
+    </div>`;
+  cargarMisRequerimientos();
+}
+
+async function enviarRequerimiento() {
+  const tipo = document.getElementById("req-tipo").value;
+  const detalle = document.getElementById("req-detalle").value.trim();
+  const desde = document.getElementById("req-desde").value;
+  const hasta = document.getElementById("req-hasta").value;
+  const res = await api({ action:"nuevoRequerimiento", operario:state.nombre, tipo, detalle, fechaDesde:desde, fechaHasta:hasta });
+  if (res && res.ok !== false) { showAlert("success","✓ Solicitud enviada"); cargarMisRequerimientos(); }
+  else showAlert("danger","Error al enviar");
+}
+
+async function cargarMisRequerimientos() {
+  const el = document.getElementById("mis-reqs");
+  if (!el) return;
+  const data = await api({ action:"getRequerimientos" });
+  const items = Array.isArray(data) ? data.filter(r=>r.Operario===state.nombre) : [];
+  el.innerHTML = `<div class="card-title">Mis solicitudes enviadas</div>` +
+    (items.length===0 ? `<div class="text-muted">Sin solicitudes enviadas.</div>` :
+    items.map(r=>`<div style="padding:9px 0;border-bottom:1px solid rgba(45,125,210,.08)">
+      <div style="font-size:11px;color:var(--text3)">${r.Fecha||""} · <em>${r.Tipo||""}</em></div>
+      <div style="font-size:13px;margin:2px 0">${r.Detalle||""}</div>
+      <span class="badge ${r.Estado==="Aprobado"?"badge-done":r.Estado==="Rechazado"?"badge-urgent":"badge-pending"}">${r.Estado||"Pendiente"}</span>
+      ${r.Respuesta?`<div style="font-size:12px;color:var(--text2);margin-top:3px">Respuesta: ${r.Respuesta}</div>`:""}
+    </div>`).join(""));
+}
+
 async function respReq(id, estado) {
   const resp = estado==="Rechazado" ? prompt("Motivo del rechazo (opcional):") || "" : "";
   const res = await api({ action:"responderRequerimiento", id, estado, respuesta:resp });
