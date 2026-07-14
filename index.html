@@ -152,10 +152,20 @@ tr:hover td { background: rgba(100,85,60,.06); }
   border-radius: 4px; margin-bottom: 8px;
 }
 .ronda-item {
-  display: grid; grid-template-columns: 20px 1fr 160px 1fr;
-  gap: 8px; align-items: center;
+  display: grid; grid-template-columns: 20px 1fr 120px 2fr;
+  gap: 6px; align-items: center;
   padding: 7px 0; border-bottom: 1px solid rgba(45,125,210,.07);
   font-size: 13px;
+}
+@media (max-width: 700px) {
+  .ronda-item {
+    grid-template-columns: 20px 1fr;
+    grid-template-rows: auto auto;
+  }
+  .ronda-item .ronda-result,
+  .ronda-item input[type=text] {
+    grid-column: 2;
+  }
 }
 .ronda-item input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--cyan); }
 .ronda-result select { padding: 4px 8px; font-size: 12px; }
@@ -2625,14 +2635,14 @@ async function renderRonda() {
             <input type="checkbox" id="ri-${si}-${ii}" onchange="updateRondaItem(${si},${ii})"
               ${window._rondasHoy && window._rondasHoy.some(r => r.Sector && r.Sector.includes(item.sector.substring(0,15))) ? "checked" : ""}>
             <div style="font-size:12px"><strong style="font-size:11px;color:var(--text2)">${item.sector}</strong><br>${item.tarea}</div>
-            <select id="rs-${si}-${ii}" class="ronda-result" style="font-size:12px;padding:5px 8px">
+            <select id="rs-${si}-${ii}" class="ronda-result" style="font-size:11px;padding:4px 4px;width:100%">
               <option value="">— resultado —</option>
               <option value="Normal">✓ Normal</option>
               <option value="Anomalía menor">⚠ Anomalía menor</option>
               <option value="Anomalía mayor">🔴 Anomalía mayor</option>
               <option value="No aplica">N/A</option>
             </select>
-            <input type="text" id="ro-${si}-${ii}" placeholder="Observación..." style="font-size:12px;padding:6px 8px;background:var(--navy2);border:1px solid var(--border);color:var(--text);border-radius:4px;width:100%">
+            <input type="text" id="ro-${si}-${ii}" placeholder="Observación..." style="font-size:12px;padding:6px 8px;background:#fff;border:1px solid var(--border);color:var(--text);border-radius:4px;width:100%;min-width:0">
           </div>`).join("")}
       </div>`).join("")}
     <div style="margin-top:20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
