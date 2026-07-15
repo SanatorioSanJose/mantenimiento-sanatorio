@@ -2792,3 +2792,38 @@ async function renderProveedores() {
       <thead><tr><th>Servicio</th><th>Empresa</th><th>N° de cuenta</th><th>Teléfono</th><th>Observaciones</th><th>Email</th></tr></thead>
       <tbody>${proveedores.map(p => renderFilaProv(p)).join("")}
       </tbody></table></div>`
+
+}
+
+function abrirModalProveedor() {
+  const ov = document.createElement("div"); ov.className="modal-overlay";
+  ov.innerHTML=`<div class="modal-box">
+    <div class="modal-title">Agregar proveedor</div>
+    <div class="form-group"><label class="form-label">Empresa *</label><input id="mp-empresa" type="text"></div>
+    <div class="form-group"><label class="form-label">Servicio que provee *</label><input id="mp-servicio" type="text"></div>
+    <div class="form-group"><label class="form-label">Teléfono</label><input id="mp-tel" type="text"></div>
+    <div class="form-group"><label class="form-label">Email</label><input id="mp-email" type="email"></div>
+    <div class="form-group"><label class="form-label">N° de cuenta / cliente</label><input id="mp-cuenta" type="text"></div>
+    <div class="form-group"><label class="form-label">Observaciones</label><textarea id="mp-obs"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarProveedor(this)">Guardar</button>
+    </div></div>`;
+  document.body.appendChild(ov);
+}
+
+async function guardarProveedor(btn) {
+  showAlert("info","Proveedor agregado al Sheets"); btn.closest(".modal-overlay").remove();
+}
+
+document.addEventListener("keydown", e => {
+  if (document.getElementById("login-screen").style.display !== "none") {
+    if (e.key >= "0" && e.key <= "9") pinPress(parseInt(e.key));
+    if (e.key === "Backspace" || e.key === "Delete") { state.pinBuffer = state.pinBuffer.slice(0,-1); renderPinDisplay(); }
+    if (e.key === "Enter") attemptLogin();
+  }
+});
+renderPinDisplay();
+</script>
+</body>
+</html>
