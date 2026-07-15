@@ -2745,7 +2745,7 @@ async function renderPersonal() {
 function renderFilaProv(p) {
   let telHtml = "—";
   if (p.Telefono && p.Telefono !== "—") {
-    const numLimpio = p.Telefono.replace(/[^0-9]/g, "");
+    const numLimpio = String(p.Telefono).replace(/[^0-9]/g, "");
     const esCelular = numLimpio.startsWith("11") || numLimpio.startsWith("15") || numLimpio.length >= 10;
     if (esCelular) {
       const waNum = numLimpio.startsWith("54") ? numLimpio : "54" + numLimpio;
