@@ -384,6 +384,18 @@ let state = {
 };
 
 // ── DATE HELPERS ─────────────────────────────────────────────
+function hacerEnlaces(texto) {
+  // Convierte URLs en el texto en enlaces clickeables
+  if (!texto || texto === "—") return texto;
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  return texto.replace(urlRegex, url => {
+    const label = url.includes("drive.google.com") ? "📄 Ver documento" :
+                  url.includes("docs.google.com") ? "📝 Ver documento" :
+                  url.includes("sheets.google.com") ? "📊 Ver planilla" : "🔗 Abrir enlace";
+    return `<a href="${url}" target="_blank" style="color:var(--cyan);font-weight:500;text-decoration:none">${label}</a>`;
+  });
+}
+
 function fechaHoy() {
   // Siempre retorna dd/MM/yyyy con ceros
   const now = new Date();
@@ -2759,9 +2771,9 @@ async function renderProveedores() {
         <td style="font-size:12px;white-space:nowrap">${p.Servicio||""}</td>
         <td><strong>${p.Empresa}</strong></td>
         <td style="font-size:11px;font-family:var(--mono)">${p.NumCuenta||"—"}</td>
-        <td style="font-size:12px;white-space:nowrap">${p.Telefono||"—"}</td>
-        <td style="font-size:12px;color:var(--text2);min-width:220px">${p.Observaciones||"—"}</td>
-        <td style="font-size:12px;color:var(--cyan)">${p.Email||"—"}</td>
+        <td style="font-size:12px;white-space:nowrap">${p.Telefono ? `<a href="https://wa.me/${p.Telefono.replace(/[^0-9]/g,'')}" target="_blank" style="color:var(--cyan);text-decoration:none">📱 ${p.Telefono}</a>` : "—"}</td>
+        <td style="font-size:12px;color:var(--text2);min-width:220px">${hacerEnlaces(p.Observaciones||"—")}</td>
+        <td style="font-size:12px;color:var(--cyan)">${p.Email ? `<a href="mailto:${p.Email}" style="color:var(--cyan)">${p.Email}</a>` : "—"}</td>
       </tr>`).join("")}
       </tbody></table></div>`;
 }
