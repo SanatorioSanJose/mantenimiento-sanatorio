@@ -2633,7 +2633,7 @@ async function renderRonda() {
         ${sec.items.map((item, ii) => `
           <div class="ronda-item">
             <input type="checkbox" id="ri-${si}-${ii}" onchange="updateRondaItem(${si},${ii})"
-              ${window._rondasHoy && window._rondasHoy.some(r => r.Sector && r.Sector.includes(item.sector.substring(0,15))) ? "checked" : ""}>
+              ${window._rondasHoy && window._rondasHoy.some(r => r.Sector && r.Sector.trim() === item.sector.trim()) ? "checked" : ""}>
             <div style="font-size:12px"><strong style="font-size:11px;color:var(--text2)">${item.sector}</strong><br>${item.tarea}</div>
             <select id="rs-${si}-${ii}" class="ronda-result" style="font-size:11px;padding:4px 4px;width:100%">
               <option value="">— resultado —</option>
