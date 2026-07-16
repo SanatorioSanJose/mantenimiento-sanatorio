@@ -1864,62 +1864,180 @@ async function renderDashboard() {
   }
 }
 
+function make3DGradient(ctx, colors) {
+  // Crea gradientes que simulan efecto 3D
+  return colors.map((color, i) => {
+    const gradient = ctx.createRadialGradient(
+      ctx.canvas.width/2, ctx.canvas.height/2, 0,
+      ctx.canvas.width/2, ctx.canvas.height/2, ctx.canvas.width/2
+    );
+    // Color más claro arriba (luz) y más oscuro abajo (sombra)
+    gradient.addColorStop(0, lighten(color, 40));
+    gradient.addColorStop(0.5, color);
+    gradient.addColorStop(1, darken(color, 30));
+    return gradient;
+  });
+}
+
+function lighten(hex, pct) {
+  const n = parseInt(hex.replace('#',''), 16);
+  const r = Math.min(255, (n>>16) + Math.round(2.55*pct));
+  const g = Math.min(255, ((n>>8)&0xff) + Math.round(2.55*pct));
+  const b = Math.min(255, (n&0xff) + Math.round(2.55*pct));
+  return `rgb(${r},${g},${b})`;
+}
+
+function darken(hex, pct) {
+  const n = parseInt(hex.replace('#',''), 16);
+  const r = Math.max(0, (n>>16) - Math.round(2.55*pct));
+  const g = Math.max(0, ((n>>8)&0xff) - Math.round(2.55*pct));
+  const b = Math.max(0, (n&0xff) - Math.round(2.55*pct));
+  return `rgb(${r},${g},${b})`;
+}
+
+// Plugin 3D shadow effect
+const shadow3DPlugin = {
+  id: 'shadow3d',
+  beforeDraw(chart) {
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.25)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetX = 4;
+    ctx.shadowOffsetY = 6;
+  },
+  afterDraw(chart) {
+    chart.ctx.restore();
+  }
+};
+
 function drawCharts(stats) {
+  const textColor = "#4a4a4a";
+  const gridColor = "rgba(100,85,60,0.1)";
+
   const chartOpts = {
     responsive:true, maintainAspectRatio:true,
-    plugins:{ legend:{ labels:{ color:"#8da4bc", font:{size:11} } } }
+    plugins:{ legend:{ labels:{ color:textColor, font:{size:11}, padding:12 } } }
   };
-  const COLORS = ["#2d7dd2","#f39c12","#27ae60","#e74c3c","#0fb8c9","#9b59b6"];
 
-  // Estado — pedidos vs propios
+  const COLORS = ["#1a6bb5","#c47a00","#1e8a4a","#c0392b","#0a8a9a","#7d3c98"];
+
+  // ── ESTADO — torta 3D ────────────────────────────────────────
   const ctx1 = document.getElementById("chart-estado");
-  const totalPedidos = stats.total || 0;
-  const totalPropios = stats.totalPropios || 0;
-  if(ctx1) new Chart(ctx1, { type:"doughnut",
-    data:{
-      labels:["Cola de pedidos","Trabajos propios","Pendientes","En curso"],
-      datasets:[{
-        data:[
-          (stats.resueltos||0),
-          totalPropios,
-          (stats.pendientes||0),
-          (stats.enCurso||0)
-        ],
-        backgroundColor:["#27ae60","#0fb8c9","#f39c12","#2d7dd2"],
-        borderWidth:0
-      }]
-    },
-    options:{
-      ...chartOpts,
-      plugins:{
-        ...chartOpts.plugins,
-        tooltip:{ callbacks:{ label: ctx => ctx.label + ": " + ctx.raw + " trabajos" } }
+  if (ctx1) {
+    const baseColors = ["#1e8a4a","#0a8a9a","#c47a00","#1a6bb5"];
+    const borderColors = baseColors.map(c => darken(c, 20));
+    new Chart(ctx1, {
+      type: "doughnut",
+      plugins: [shadow3DPlugin],
+      data: {
+        labels: ["Resueltos","Trabajos propios","Pendientes","En curso"],
+        datasets: [{
+          data: [stats.resueltos||0, stats.totalPropios||0, stats.pendientes||0, stats.enCurso||0],
+          backgroundColor: baseColors.map(c => lighten(c, 10)),
+          borderColor: borderColors,
+          borderWidth: 2,
+          hoverBackgroundColor: baseColors.map(c => lighten(c, 25)),
+          hoverBorderWidth: 3,
+          hoverOffset: 8,
+        }]
+      },
+      options: {
+        ...chartOpts,
+        cutout: "55%",
+        plugins: {
+          ...chartOpts.plugins,
+          tooltip: { callbacks: { label: ctx => " " + ctx.label + ": " + ctx.raw + " trabajos" } }
+        }
       }
-    }
-  });
+    });
+  }
 
-  // Urgencia
-  const ctx2 = document.getElementById("chart-urgencia");
-  const urgData = stats.porUrgencia || {};
-  if(ctx2) new Chart(ctx2, { type:"pie",
-    data:{ labels:Object.keys(urgData), datasets:[{ data:Object.values(urgData), backgroundColor:["#e74c3c","#f39c12","#27ae60"], borderWidth:0 }] },
-    options:{...chartOpts} });
-
-  // Por operario
+  // ── CARGA POR OPERARIO — barras 3D ────────────────────────────
   const ctx3 = document.getElementById("chart-operario");
   const opData = stats.porOperario || {};
-  if(ctx3) new Chart(ctx3, { type:"bar",
-    data:{ labels:Object.keys(opData), datasets:[{ label:"Trabajos", data:Object.values(opData), backgroundColor: Object.keys(opData).map((_,i)=>COLORS[i%COLORS.length]), borderWidth:0 }] },
-    options:{ ...chartOpts, scales:{ x:{ticks:{color:"#8da4bc",font:{size:10}}}, y:{ticks:{color:"#8da4bc",font:{size:10}}, grid:{color:"rgba(45,125,210,.1)"}} }, plugins:{ legend:{display:false} } } });
+  if (ctx3) {
+    const opColors = Object.keys(opData).map((_,i) => COLORS[i % COLORS.length]);
+    const opBorders = opColors.map(c => darken(c, 25));
+    new Chart(ctx3, {
+      type: "bar",
+      plugins: [shadow3DPlugin],
+      data: {
+        labels: Object.keys(opData).map(n => n.split(" ")[0]),
+        datasets: [{
+          label: "Trabajos",
+          data: Object.values(opData),
+          backgroundColor: opColors.map(c => lighten(c, 8)),
+          borderColor: opBorders,
+          borderWidth: 2,
+          borderRadius: 6,
+          borderSkipped: false,
+          hoverBackgroundColor: opColors.map(c => lighten(c, 22)),
+        }]
+      },
+      options: {
+        ...chartOpts,
+        scales: {
+          x: { ticks: { color: textColor, font:{size:9} }, grid: { display:false } },
+          y: { ticks: { color: textColor, font:{size:10} }, grid: { color: gridColor } }
+        },
+        plugins: { legend: { display:false }, tooltip: { callbacks: { title: (items) => Object.keys(opData)[items[0].dataIndex] } } }
+      }
+    });
+  }
 
-  // Rondas
+  // ── RONDAS HOY — doughnut 3D ─────────────────────────────────
   const ctx4 = document.getElementById("chart-rondas");
-  const rondasTotal = stats.rondasTotal || 37;
+  const rondasTotal = stats.rondasTotal || 19;
   const rondasHoy = stats.rondasHoy || 0;
   const pct = Math.min(100, Math.round(rondasHoy / rondasTotal * 100));
-  if(ctx4) new Chart(ctx4, { type:"doughnut",
-    data:{ labels:["Completadas","Pendientes"], datasets:[{ data:[pct, 100-pct], backgroundColor:["#0fb8c9","#1e3251"], borderWidth:0 }] },
-    options:{ ...chartOpts, plugins:{ legend:{labels:{color:"#8da4bc",font:{size:11}}}, tooltip:{callbacks:{label:ctx=>ctx.label+": "+ctx.raw+"%"}} } } });
+  if (ctx4) {
+    new Chart(ctx4, {
+      type: "doughnut",
+      plugins: [shadow3DPlugin],
+      data: {
+        labels: ["Completadas","Pendientes"],
+        datasets: [{
+          data: [pct, 100-pct],
+          backgroundColor: [lighten("#0a8a9a",10), "#e0d9cc"],
+          borderColor: [darken("#0a8a9a",20), "#c8bfb0"],
+          borderWidth: 2,
+          hoverOffset: 8,
+        }]
+      },
+      options: {
+        ...chartOpts,
+        cutout: "60%",
+        plugins: {
+          ...chartOpts.plugins,
+          tooltip: { callbacks: { label: ctx => " " + ctx.label + ": " + ctx.raw + "%" } }
+        }
+      }
+    });
+  }
+
+  // ── URGENCIA — pie 3D ─────────────────────────────────────────
+  const ctx2 = document.getElementById("chart-urgencia");
+  const urgData = stats.porUrgencia || {};
+  if (ctx2) {
+    const urgColors = ["#c0392b","#c47a00","#1e8a4a"];
+    new Chart(ctx2, {
+      type: "pie",
+      plugins: [shadow3DPlugin],
+      data: {
+        labels: Object.keys(urgData),
+        datasets: [{
+          data: Object.values(urgData),
+          backgroundColor: urgColors.map(c => lighten(c, 12)),
+          borderColor: urgColors.map(c => darken(c, 20)),
+          borderWidth: 2,
+          hoverBackgroundColor: urgColors.map(c => lighten(c, 25)),
+          hoverOffset: 8,
+        }]
+      },
+      options: { ...chartOpts }
+    });
+  }
 }
 
 // ── PEDIDO (SERVICIOS) ───────────────────────────────────────
