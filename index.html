@@ -2823,7 +2823,14 @@ async function renderProveedores() {
 
   document.getElementById("prov-table").innerHTML = `
     <div class="tbl-wrap"><table>
-      <thead><tr><th>Servicio</th><th>Empresa</th><th>N° de cuenta</th><th>Teléfono</th><th>Observaciones</th><th>Email</th></tr></thead>
+      <thead><tr>
+        <th style="width:90px">Servicio</th>
+        <th style="width:100px">Empresa</th>
+        <th style="width:130px">N° de cuenta</th>
+        <th style="width:80px">Teléfono</th>
+        <th>Observaciones</th>
+        <th style="width:80px">Email</th>
+      </tr></thead>
       <tbody>${proveedores.map(p => renderFilaProv(p)).join("")}
       </tbody></table></div>`
 }
