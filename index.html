@@ -295,7 +295,8 @@ tr:hover td { background: rgba(100,85,60,.06); }
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
   .charts-row { grid-template-columns: 1fr; }
   #content { padding: 16px; }
-  #topbar-logo { display: none; }
+  #topbar-logo { display: block; }
+  #topbar-logo img { height: 26px !important; }
 }
 
 /* ── NOTIFICACION BANNER ── */
@@ -2211,7 +2212,13 @@ async function renderCola() {
     {ID:"PED-003",Fecha:"26/05/2025",Hora:"07:55",Servicio:"Quirófano",Solicitante:"Martínez, Ana",Descripcion:"Termostato sala 2 no responde",Urgencia:"Alta",Estado:"En curso",OperarioAsignado:"García"},
   ];
   state.pedidos = data;
-  const activos = data.filter(p => p.Estado !== "Resuelto");
+  const activos = data.filter(p => p.Estado !== "Resuelto")
+    .sort((a, b) => {
+      // Ordenar por fecha y hora descendente (más nuevo primero)
+      const fa = (a.Fecha||"").split("/").reverse().join("") + (a.Hora||"").replace(":","");
+      const fb = (b.Fecha||"").split("/").reverse().join("") + (b.Hora||"").replace(":","");
+      return fb.localeCompare(fa);
+    });
 
   const badge = document.getElementById("badge-pedidos");
   if(badge) badge.textContent = activos.filter(p=>p.Estado==="Pendiente").length;
