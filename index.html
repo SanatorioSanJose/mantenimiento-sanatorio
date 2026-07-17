@@ -295,8 +295,8 @@ tr:hover td { background: rgba(100,85,60,.06); }
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
   .charts-row { grid-template-columns: 1fr; }
   #content { padding: 16px; }
-  #topbar-logo { display: block; }
-  #topbar-logo img { height: 26px !important; }
+  #topbar-logo { display: block; max-width: calc(100% - 240px); }
+  #topbar-logo img { height: 22px !important; }
 }
 
 /* ── NOTIFICACION BANNER ── */
@@ -479,8 +479,9 @@ function normalizarHora(valor) {
 function startClock() {
   function tick() {
     const now = new Date();
-    document.getElementById("clock").textContent =
-      fechaHoy() + " " + now.toLocaleTimeString("es-AR", {hour:"2-digit",minute:"2-digit"});
+    document.getElementById("clock").innerHTML =
+      '<span style="display:block;font-size:11px">' + fechaHoy() + '</span>' +
+      '<span style="display:block;font-size:13px">' + now.toLocaleTimeString("es-AR", {hour:"2-digit",minute:"2-digit"}) + '</span>';
   }
   tick(); setInterval(tick, 10000);
 }
