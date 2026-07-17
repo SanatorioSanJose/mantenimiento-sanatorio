@@ -2884,6 +2884,14 @@ async function enviarRonda(completa) {
 }
 
 // ── PERSONAL ─────────────────────────────────────────────────
+// ── READONLY BANNER ──────────────────────────────────────────
+function soloLecturaDirector() {
+  if (state.role !== "director") return "";
+  return `<div class="alert alert-info mb-16" style="max-width:100%">
+    👁 Modo solo lectura — Dirección. Podés ver toda la información pero no modificar datos del sistema.
+  </div>`;
+}
+
 async function renderPersonal() {
   document.getElementById("content").innerHTML = soloLecturaDirector() + `
     <div class="section-header">
