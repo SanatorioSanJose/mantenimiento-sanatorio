@@ -1069,9 +1069,6 @@ async function cargarTablero() {
     const deJefe = data.filter(n => (n.Turno||"").trim() === "Jefe de Mantenimiento");
     console.log("[Tablero] Del jefe:", deJefe.length, JSON.stringify(deJefe.slice(-2)));
   }
-  const hoy = new Date();
-  hoy.setHours(0,0,0,0);
-
   const items = Array.isArray(data)
     ? data.filter(n => {
         if (n.Turno !== "Jefe de Mantenimiento") return false;
@@ -1079,9 +1076,9 @@ async function cargarTablero() {
         const tipoStr = n.Tipo || "";
         if (tipoStr.includes("Vigente hasta:")) {
           const partes = tipoStr.split("Vigente hasta:")[1].trim();
-          const fechaVig = new Date(partes);
-          fechaVig.setHours(23,59,59,0);
-          if (!isNaN(fechaVig.getTime()) && fechaVig < hoy) return false;
+          // Comparar como string yyyy-mm-dd vs fecha de hoy
+          const hoyStr = fechaHoy().split("/").reverse().join("-"); // dd/MM/yyyy → yyyy-MM-dd
+          if (partes < hoyStr) return false; // vencida
         }
         return true;
       })
