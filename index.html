@@ -767,7 +767,12 @@ function launchApp() {
       }
     });
   }
-  navigate("dashboard");
+  // Mostrar pilares de gestión y luego traspaso de guardia
+  if (state.role === "operario" || state.role === "supervisor") {
+    mostrarPilaresGestion();
+  } else {
+    navigate("dashboard");
+  }
 }
 
 function logout() {
@@ -805,6 +810,7 @@ function buildNav() {
         { id:"cola", icon:"📥", label:"Cola de pedidos", badge:"pedidos" },
         { id:"ronda", icon:"🚶", label:"Realizar ronda" },
         { id:"trabajo_propio", icon:"🔨", label:"Trabajo propio" },
+        { id:"traspaso", icon:"🔄", label:"Traspaso de Guardia" },
         { id:"novedades", icon:"📝", label:"Novedades de turno" },
         { id:"oxigeno", icon:"🫧", label:"Gestión de gases" },
         { id:"proveedores", icon:"📞", label:"Proveedores" },
@@ -883,6 +889,7 @@ function navigate(page) {
   const titles = {
     dashboard:"Dashboard", cola:"Cola de pedidos", pedido:"Nuevo pedido de intervención",
     mis_pedidos:"Mis pedidos", ronda:"Registro de ronda", trabajo_propio:"Trabajo propio",
+    traspaso:"Traspaso de Guardia",
     novedades:"Novedades de turno", personal:"Nómina del personal", proveedores:"Proveedores y servicios",
     obleas:"Obleas y vencimientos", servicios_admin:"Gestión de servicios / PINs",
     req_personal_admin:"Solicitudes del personal", requerimientos_personal:"Mis solicitudes",
@@ -899,6 +906,7 @@ function navigate(page) {
     mis_pedidos: renderMisPedidos,
     ronda: renderRonda,
     trabajo_propio: renderTrabajoPropioForm,
+    traspaso: renderTraspaso,
     novedades: renderNovedades,
     personal: renderPersonal,
     proveedores: renderProveedores,
@@ -1804,6 +1812,230 @@ function mostrarGasMsg(tipo, texto) {
   if (!el) return;
   el.innerHTML = `<div class="alert alert-${tipo}" style="max-width:580px;white-space:pre-line">${texto}</div>`;
   if (tipo === 'success') setTimeout(() => { el.innerHTML = ''; }, 6000);
+}
+
+
+// ── PILARES DE GESTIÓN ────────────────────────────────────────
+function mostrarPilaresGestion() {
+  const overlay = document.createElement("div");
+  overlay.id = "pilares-overlay";
+  overlay.style.cssText = `
+    position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;
+    display:flex;align-items:center;justify-content:center;padding:20px;
+  `;
+  overlay.innerHTML = `
+    <div style="background:var(--navy2);border:1px solid var(--border);border-radius:12px;
+                padding:28px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:28px;margin-bottom:8px">⚠️</div>
+        <div style="font-size:16px;font-weight:700;color:var(--cyan);letter-spacing:.05em">
+          PILARES DE GESTIÓN DEL TURNO
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px">
+        <div style="background:var(--navy3);border-left:4px solid var(--blue);border-radius:6px;padding:12px 14px">
+          <div style="font-weight:600;color:var(--text);margin-bottom:4px">📥 Cola de Pedidos</div>
+          <div style="font-size:12px;color:var(--text2)">Revisá y atendé los pedidos pendientes. Los trabajos no atendidos afectan la operación del sanatorio.</div>
+        </div>
+        <div style="background:var(--navy3);border-left:4px solid var(--amber);border-radius:6px;padding:12px 14px">
+          <div style="font-weight:600;color:var(--text);margin-bottom:4px">🚶 Rondas de Inspección — 19 puntos</div>
+          <div style="font-size:12px;color:var(--text2)">Las rondas <strong style="color:var(--amber)">NO son opcionales</strong>. Registrá cada punto inspeccionado durante el turno.</div>
+        </div>
+        <div style="background:var(--navy3);border-left:4px solid var(--red);border-radius:6px;padding:12px 14px">
+          <div style="font-weight:600;color:var(--text);margin-bottom:4px">🫧 Gestión de Gases Medicinales</div>
+          <div style="font-size:12px;color:var(--text2)">Monitoreo <strong style="color:var(--red)">crítico y obligatorio</strong>. El desabastecimiento de oxígeno afecta directamente la vida de los pacientes.</div>
+        </div>
+        <div style="background:var(--navy3);border-left:4px solid var(--green);border-radius:6px;padding:12px 14px">
+          <div style="font-weight:600;color:var(--text);margin-bottom:4px">📝 Novedades del Turno</div>
+          <div style="font-size:12px;color:var(--text2)">Antes de finalizar tu jornada, <strong style="color:var(--green)">registrá las novedades</strong>. El turno siguiente debe iniciar sabiendo el estado técnico del sanatorio.</div>
+        </div>
+        <div style="background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.3);border-radius:6px;padding:12px 14px;text-align:center">
+          <div style="font-size:12px;color:var(--red);font-weight:600;line-height:1.6">
+            Lo que no está registrado en esta aplicación,<br>técnicamente <strong>NO se hizo</strong>.<br>
+            <span style="color:var(--text2);font-weight:400">El sistema genera métricas de desempeño individuales.</span>
+          </div>
+        </div>
+      </div>
+
+      <button onclick="cerrarPilaresYMostrarTraspaso()" 
+        style="width:100%;padding:14px;background:var(--cyan);color:#fff;border:none;
+               border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;
+               box-shadow:0 4px 8px rgba(10,138,154,0.3)">
+        ✓ Entendido — Iniciar turno
+      </button>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function cerrarPilaresYMostrarTraspaso() {
+  const overlay = document.getElementById("pilares-overlay");
+  if (overlay) overlay.remove();
+  // Mostrar traspaso de guardia
+  await mostrarTraspasoModal();
+}
+
+async function mostrarTraspasoModal() {
+  const turnoActual = getTurnoActual();
+  // Determinar turno anterior
+  const turnosOrden = ["Mañana", "Tarde", "Noche"];
+  const idxActual = turnosOrden.indexOf(turnoActual);
+  const turnoAnterior = turnosOrden[(idxActual - 1 + 3) % 3];
+
+  // Cargar novedades del turno anterior
+  const data = await api({ action:"getNovedades" });
+  const hoy = fechaHoy();
+
+  let novedadesAnterior = [];
+  if (Array.isArray(data)) {
+    novedadesAnterior = data.filter(n => {
+      const fechaNov = normalizarFecha(n.Fecha);
+      const esHoy = fechaNov === hoy;
+      // También incluir novedades de ayer noche si el turno actual es mañana
+      const esAyer = turnoActual === "Mañana" && n.Turno === "Noche";
+      return (esHoy || esAyer) && n.Turno === turnoAnterior;
+    });
+  }
+
+  const overlay = document.createElement("div");
+  overlay.id = "traspaso-overlay";
+  overlay.style.cssText = `
+    position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;
+    display:flex;align-items:center;justify-content:center;padding:20px;
+  `;
+
+  const hayNovedades = novedadesAnterior.length > 0;
+
+  overlay.innerHTML = `
+    <div style="background:var(--navy2);border:1px solid var(--border);border-radius:12px;
+                padding:28px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:26px;margin-bottom:8px">🔄</div>
+        <div style="font-size:16px;font-weight:700;color:var(--cyan)">TRASPASO DE GUARDIA</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:4px">
+          Turno <strong>${turnoAnterior}</strong> → Turno <strong style="color:var(--cyan)">${turnoActual}</strong>
+        </div>
+      </div>
+
+      ${hayNovedades ? `
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+          ${novedadesAnterior.map(n => `
+            <div style="background:var(--navy3);border-radius:8px;padding:12px 14px">
+              <div style="font-size:11px;color:var(--text3);margin-bottom:5px">
+                ${normalizarHora(n.Hora)||""} · <strong style="color:var(--text2)">${n.Operario||""}</strong> · <em>${n.Tipo||""}</em>
+              </div>
+              <div style="font-size:13px;line-height:1.5">${n.Novedad||""}</div>
+            </div>`).join("")}
+        </div>
+      ` : `
+        <div style="text-align:center;padding:30px 20px;margin-bottom:20px;
+                    background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.3);border-radius:8px">
+          <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+          <div style="font-size:18px;font-weight:700;color:var(--red);margin-bottom:8px">
+            Turno ${turnoAnterior}<br>NO registró novedades
+          </div>
+          <div style="font-size:13px;color:var(--text2)">
+            El turno anterior no dejó información sobre el estado del sanatorio.
+          </div>
+        </div>
+      `}
+
+      <div style="display:flex;gap:10px">
+        <button onclick="document.getElementById('traspaso-overlay').remove();navigate('dashboard');"
+          style="flex:1;padding:14px;background:var(--cyan);color:#fff;border:none;
+                 border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">
+          ✓ Iniciar turno
+        </button>
+        <button onclick="document.getElementById('traspaso-overlay').remove();navigate('traspaso');"
+          style="padding:14px 18px;background:var(--navy3);color:var(--text2);border:1px solid var(--border);
+                 border-radius:8px;font-size:13px;cursor:pointer">
+          📋 Ver completo
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+// ── TRASPASO DE GUARDIA (sección del menú) ────────────────────
+async function renderTraspaso() {
+  document.getElementById("content").innerHTML = `
+    <div class="section-header">
+      <div><div class="section-title">Traspaso de Guardia</div>
+      <div class="section-sub">Novedades del turno anterior y estado de situación</div></div>
+      <button class="btn btn-primary btn-sm" onclick="mostrarTraspasoModal()">🔄 Ver modal de traspaso</button>
+    </div>
+    <div id="traspaso-content"><div class="text-muted">Cargando...</div></div>`;
+
+  const data = await api({ action:"getNovedades" });
+  const hoy = fechaHoy();
+  const turnoActual = getTurnoActual();
+  const turnosOrden = ["Mañana", "Tarde", "Noche"];
+
+  if (!Array.isArray(data)) {
+    document.getElementById("traspaso-content").innerHTML = `<div class="alert alert-warning">Sin datos disponibles.</div>`;
+    return;
+  }
+
+  // Agrupar novedades de hoy por turno
+  const porTurno = {};
+  turnosOrden.forEach(t => {
+    porTurno[t] = data.filter(n => normalizarFecha(n.Fecha) === hoy && n.Turno === t);
+  });
+
+  const idxActual = turnosOrden.indexOf(turnoActual);
+  const turnoAnterior = turnosOrden[(idxActual - 1 + 3) % 3];
+
+  let html = "";
+
+  // Mostrar turno anterior destacado
+  const novsAnterior = porTurno[turnoAnterior] || [];
+  html += `
+    <div style="margin-bottom:20px">
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--cyan);
+                  background:var(--navy3);padding:8px 12px;border-radius:4px;margin-bottom:10px;
+                  display:flex;align-items:center;gap:8px">
+        🔄 Turno anterior: <strong>${turnoAnterior}</strong>
+        ${novsAnterior.length === 0 ? '<span style="margin-left:auto;color:var(--red);font-weight:700">⚠ SIN NOVEDADES REGISTRADAS</span>' : ''}
+      </div>
+      ${novsAnterior.length === 0 ?
+        `<div style="background:rgba(231,76,60,.06);border:1px solid rgba(231,76,60,.2);border-radius:8px;
+                     padding:16px;text-align:center;color:var(--text2);font-size:13px">
+          El turno ${turnoAnterior} no dejó novedades registradas.
+        </div>` :
+        novsAnterior.map(n => `
+          <div style="padding:10px 14px;border-bottom:1px solid rgba(45,125,210,.08);background:rgba(15,184,201,.04);border-radius:6px;margin-bottom:6px">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">
+              ${normalizarHora(n.Hora)||""} · <strong>${n.Operario||""}</strong> · <em>${n.Tipo||""}</em>
+            </div>
+            <div style="font-size:13px">${n.Novedad||""}</div>
+          </div>`).join("")
+      }
+    </div>`;
+
+  // Mostrar otros turnos del día
+  turnosOrden.filter(t => t !== turnoAnterior).forEach(turno => {
+    const novs = porTurno[turno] || [];
+    if (novs.length > 0) {
+      html += `
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);
+                      padding:6px 12px;border-radius:4px;background:var(--navy3);margin-bottom:8px">
+            Turno ${turno} ${turno === turnoActual ? "(turno actual)" : ""}
+          </div>
+          ${novs.map(n => `
+            <div style="padding:9px 14px;border-bottom:1px solid rgba(45,125,210,.06);margin-bottom:4px">
+              <div style="font-size:11px;color:var(--text3);margin-bottom:3px">
+                ${normalizarHora(n.Hora)||""} · <strong>${n.Operario||""}</strong> · <em>${n.Tipo||""}</em>
+              </div>
+              <div style="font-size:13px">${n.Novedad||""}</div>
+            </div>`).join("")}
+        </div>`;
+    }
+  });
+
+  if (!html) html = `<div class="text-muted">Sin novedades registradas hoy.</div>`;
+
+  document.getElementById("traspaso-content").innerHTML = html;
 }
 
 // ── DASHBOARD ────────────────────────────────────────────────
