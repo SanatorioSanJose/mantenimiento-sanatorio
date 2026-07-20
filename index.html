@@ -1064,6 +1064,11 @@ async function cargarTablero() {
   const lista = document.getElementById("tablero-lista");
   if (!lista) return;
   const data = await api({ action:"getNovedades" });
+  console.log("[Tablero] Total:", Array.isArray(data) ? data.length : "error");
+  if (Array.isArray(data)) {
+    const deJefe = data.filter(n => (n.Turno||"").trim() === "Jefe de Mantenimiento");
+    console.log("[Tablero] Del jefe:", deJefe.length, JSON.stringify(deJefe.slice(-2)));
+  }
   const hoy = new Date();
   hoy.setHours(0,0,0,0);
 
@@ -1836,10 +1841,10 @@ async function verificarPilaresHoy() {
   const yaConfirmo = localStorage.getItem(clave);
   
   if (yaConfirmo) {
-    // Ya confirmó hoy — ir directo al traspaso
-    await mostrarTraspasoModal();
+    // Ya confirmó hoy — ir directo al dashboard sin carteles
+    navigate("dashboard");
   } else {
-    // No confirmó todavía — mostrar pilares
+    // No confirmó todavía — mostrar pilares (luego traspaso)
     mostrarPilaresGestion();
   }
 }
