@@ -1074,13 +1074,18 @@ async function cargarTablero() {
         const tipoStr = n.Tipo || "";
         if (tipoStr.includes("Vigente hasta:")) {
           const partes = tipoStr.split("Vigente hasta:")[1].trim();
-          // Formato puede ser yyyy-mm-dd (del input date)
           const fechaVig = new Date(partes);
           fechaVig.setHours(23,59,59,0);
           if (!isNaN(fechaVig.getTime()) && fechaVig < hoy) return false;
         }
         return true;
-      }).reverse()
+      })
+      .sort((a, b) => {
+        // Ordenar más reciente primero usando normalizarFecha
+        const fa = normalizarFecha(a.Fecha).split("/").reverse().join("") + normalizarHora(a.Hora).replace(":","");
+        const fb = normalizarFecha(b.Fecha).split("/").reverse().join("") + normalizarHora(b.Hora).replace(":","");
+        return fb.localeCompare(fa);
+      })
     : [];
 
   const iconos = { "Instrucción":"📋","Alerta":"🔴","Información":"ℹ️","Recordatorio":"🔔","Urgente":"🚨" };
