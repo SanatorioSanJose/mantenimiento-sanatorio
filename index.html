@@ -403,7 +403,7 @@ tr:hover td { background: rgba(100,85,60,.06); }
 // ═══════════════════════════════════════════════════════════
 // CONFIG — REEMPLAZAR CON TU URL DE GOOGLE APPS SCRIPT
 // ═══════════════════════════════════════════════════════════
-const API_URL = "https://script.google.com/macros/s/AKfycbz8c_jn6OOY86ZXcBpyEZZlazhZnPQ1X3cHSiPIidFbK9Y6BwWWO0ShHYyiRS0KZ7h0/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycby3O5kEH7ZNb78bFQIaUK5ap53t9XqZ24e4oFr7QPmSjncs0D7VHRblNDQpy-xuf21t/exec";
 
 // Todos los PINs se validan contra Google Sheets — no hay PINs hardcodeados
 const PINS_DEMO = {}; // vacío — toda validación va al servidor
@@ -1427,6 +1427,12 @@ function renderGasRonda06(c) {
       </div>
 
       <div class="form-group">
+        <label class="form-label">Tubos aire comprimido en batería de soporte (14 bocas)</label>
+        <input id="g-tbateriaaire" type="number" placeholder="Cantidad actual en batería" min="0" max="14">
+        <div style="font-size:11px;color:var(--amber);margin-top:3px">⚠ El aire comprimido de la batería brinda un soporte aproximado de 4 horas. Capacidad máxima: 14 tubos.</div>
+      </div>
+
+      <div class="form-group">
         <label class="form-label">Observaciones</label>
         <textarea id="g-obs" placeholder="Anomalías observadas, novedades del área de gases..."></textarea>
       </div>
@@ -1450,12 +1456,14 @@ async function guardarRonda06() {
   if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
 
   const bateria = document.getElementById('g-tbateria').value || 0;
+  const bateriaAire = document.getElementById('g-tbateriaaire').value || 0;
   const res = await api({
     action: 'registrarRondaGas',
     operario: state.nombre,
     nivelTanque: nivel,
     stockTubos: JSON.stringify(stock),
     bateriaSoporte: bateria,
+    bateriaAire: bateriaAire,
     observaciones: document.getElementById('g-obs').value,
   });
 
@@ -1489,7 +1497,7 @@ async function guardarRonda06() {
       mostrarGasMsg('success', '✓ Ronda 06:00 registrada correctamente. Stock dentro de los mínimos.');
     }
     // Limpiar campos
-    ['g-nivel','g-tox','g-taire','g-tco2','g-ttrans','g-tbateria','g-obs'].forEach(id => {
+    ['g-nivel','g-tox','g-taire','g-tco2','g-ttrans','g-tbateria','g-tbateriaaire','g-obs'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
