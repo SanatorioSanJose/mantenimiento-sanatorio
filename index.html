@@ -403,7 +403,7 @@ tr:hover td { background: rgba(100,85,60,.06); }
 // ═══════════════════════════════════════════════════════════
 // CONFIG — REEMPLAZAR CON TU URL DE GOOGLE APPS SCRIPT
 // ═══════════════════════════════════════════════════════════
-const API_URL = "https://script.google.com/macros/s/AKfycby3O5kEH7ZNb78bFQIaUK5ap53t9XqZ24e4oFr7QPmSjncs0D7VHRblNDQpy-xuf21t/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwKzgoUgxe3iwRHFfjED4mKy3bz-aSl4uv0NQowCS5e7h287pLEfM1eyH-as6ANR4jD/exec";
 
 // Todos los PINs se validan contra Google Sheets — no hay PINs hardcodeados
 const PINS_DEMO = {}; // vacío — toda validación va al servidor
@@ -3540,7 +3540,30 @@ function abrirModalProveedor() {
 }
 
 async function guardarProveedor(btn) {
-  showAlert("info","Proveedor agregado al Sheets"); btn.closest(".modal-overlay").remove();
+  const empresa = document.getElementById("mp-empresa").value.trim();
+  const servicio = document.getElementById("mp-servicio").value.trim();
+  if (!empresa || !servicio) { showAlert("warning","Completar empresa y servicio"); return; }
+
+  btn.disabled = true; btn.textContent = "Guardando...";
+
+  const res = await api({
+    action: "nuevoProveedor",
+    empresa,
+    servicio,
+    telefono: document.getElementById("mp-tel").value.trim(),
+    email: document.getElementById("mp-email").value.trim(),
+    numCuenta: document.getElementById("mp-cuenta").value.trim(),
+    observaciones: document.getElementById("mp-obs").value.trim(),
+  });
+
+  if (res && res.ok !== false) {
+    showAlert("success","✓ Proveedor agregado correctamente");
+    btn.closest(".modal-overlay").remove();
+    renderProveedores(); // recargar lista
+  } else {
+    btn.disabled = false; btn.textContent = "Guardar";
+    showAlert("danger","Error al guardar: " + (res?.error || "verificar conexión"));
+  }
 }
 
 document.addEventListener("keydown", e => {
