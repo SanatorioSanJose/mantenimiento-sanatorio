@@ -403,7 +403,7 @@ tr:hover td { background: rgba(100,85,60,.06); }
 // ═══════════════════════════════════════════════════════════
 // CONFIG — REEMPLAZAR CON TU URL DE GOOGLE APPS SCRIPT
 // ═══════════════════════════════════════════════════════════
-const API_URL = "https://script.google.com/macros/s/AKfycbxqJo9NHY_VoeLtImrdDaFL6KRKK4xt0MkfF2HRhT2zcHe-jju-RMPApmTKyyUY6NkJ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbz8c_jn6OOY86ZXcBpyEZZlazhZnPQ1X3cHSiPIidFbK9Y6BwWWO0ShHYyiRS0KZ7h0/exec";
 
 // Todos los PINs se validan contra Google Sheets — no hay PINs hardcodeados
 const PINS_DEMO = {}; // vacío — toda validación va al servidor
@@ -769,7 +769,7 @@ function launchApp() {
   }
   // Mostrar pilares de gestión y luego traspaso de guardia
   if (state.role === "operario" || state.role === "supervisor") {
-    mostrarPilaresGestion();
+    verificarPilaresHoy();
   } else {
     navigate("dashboard");
   }
@@ -1816,6 +1816,42 @@ function mostrarGasMsg(tipo, texto) {
 
 
 // ── PILARES DE GESTIÓN ────────────────────────────────────────
+async function verificarPilaresHoy() {
+  // Verificar si el operario ya confirmó hoy
+  const hoy = fechaHoy();
+  const clave = "pilares_" + state.nombre.replace(/ /g,"_") + "_" + hoy.replace(/\//g,"-");
+  const yaConfirmo = localStorage.getItem(clave);
+  
+  if (yaConfirmo) {
+    // Ya confirmó hoy — ir directo al traspaso
+    await mostrarTraspasoModal();
+  } else {
+    // No confirmó todavía — mostrar pilares
+    mostrarPilaresGestion();
+  }
+}
+
+async function confirmarPilaresYRegistrar() {
+  const btn = document.querySelector("#pilares-overlay button");
+  if (btn) { btn.disabled = true; btn.textContent = "Registrando..."; }
+
+  // Registrar confirmación en el Sheet
+  const res = await api({
+    action: "registrarConfirmacionPilares",
+    operario: state.nombre,
+    turno: getTurnoActual(),
+    legajo: state.legajo || "—",
+  });
+
+  // Guardar en localStorage para no mostrar de nuevo hoy
+  const hoy = fechaHoy();
+  const clave = "pilares_" + state.nombre.replace(/ /g,"_") + "_" + hoy.replace(/\//g,"-");
+  localStorage.setItem(clave, new Date().toISOString());
+
+  // Continuar con el traspaso
+  await cerrarPilaresYMostrarTraspaso();
+}
+
 function mostrarPilaresGestion() {
   const overlay = document.createElement("div");
   overlay.id = "pilares-overlay";
@@ -1858,12 +1894,15 @@ function mostrarPilaresGestion() {
         </div>
       </div>
 
-      <button onclick="cerrarPilaresYMostrarTraspaso()" 
+      <button onclick="confirmarPilaresYRegistrar()" 
         style="width:100%;padding:14px;background:var(--cyan);color:#fff;border:none;
                border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;
                box-shadow:0 4px 8px rgba(10,138,154,0.3)">
         ✓ Entendido — Iniciar turno
       </button>
+      <div style="font-size:10px;color:var(--text3);text-align:center;margin-top:8px">
+        Al confirmar, quedará registrado que leíste y aceptaste los pilares de gestión.
+      </div>
     </div>`;
   document.body.appendChild(overlay);
 }
