@@ -36,7 +36,12 @@ html, body { height: 100%; background: var(--navy); color: var(--text); font-fam
   border-right: 1px solid var(--border);
   display: flex; flex-direction: column;
   transition: transform .25s;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
+#sidebar::-webkit-scrollbar { width: 4px; }
+#sidebar::-webkit-scrollbar-track { background: transparent; }
+#sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 #main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
 #topbar {
   height: 52px; background: var(--navy2); border-bottom: 1px solid var(--border);
@@ -381,6 +386,9 @@ tr:hover td { background: rgba(100,85,60,.06); }
       <div class="user-name" id="user-name-display">—</div>
       <div class="user-role" id="user-role-display">—</div>
       <button class="btn-logout" onclick="logout()">Cerrar sesión</button>
+    </div>
+    <div style="text-align:center;padding:8px 16px 12px;border-top:1px solid var(--border)">
+      <span style="font-family:'Edwardian Script ITC','Palatino Linotype','Book Antiqua',cursive;font-size:13px;color:var(--text3);font-style:italic">by Lic. Sebastian Espeche</span>
     </div>
   </nav>
 
@@ -830,7 +838,6 @@ function buildNav() {
         { id:"req_personal_admin", icon:"📅", label:"Solicitudes del personal" },
         { id:"proveedores", icon:"📞", label:"Proveedores" },
         { id:"obleas", icon:"🏷", label:"Obleas / venc." },
-        { id:"servicios_admin", icon:"🔑", label:"Servicios / PINs" },
       ]
     });
   }
@@ -860,7 +867,6 @@ function buildNav() {
         { id:"req_personal_admin", icon:"📅", label:"Solicitudes del personal" },
         { id:"proveedores", icon:"📞", label:"Proveedores" },
         { id:"obleas", icon:"🏷", label:"Obleas / venc." },
-        { id:"servicios_admin", icon:"🔑", label:"Servicios / PINs" },
       ]
     });
   }
@@ -1240,21 +1246,24 @@ const EMAIL_CASCIA = "rodrigo.rivas@casciagases.com.ar";
 const EMAIL_RESPUESTA = "mantenimiento@sanatoriosanjose.org.ar";
 
 async function renderOxigeno() {
+  const esDirector = state.role === "director";
   document.getElementById("content").innerHTML = `
     <div class="section-header">
       <div><div class="section-title">Gestión de gases</div>
       <div class="section-sub">Oxígeno líquido · Tubos · Movimientos</div></div>
     </div>
+    ${esDirector ? '<div class="alert alert-warning mb-8">👁 Modo solo lectura — Dirección. Solo podés consultar el stock actual.</div>' : ""}
     <div class="tabs" id="gas-tabs">
-      <button class="tab-btn active" onclick="gasTab('ronda06')">🕕 Ronda 06:00</button>
-      <button class="tab-btn" onclick="gasTab('tubos')">🔵 Movimiento tubos</button>
-      <button class="tab-btn" onclick="gasTab('pedidoprov')">📋 Tubos entregados por empresa</button>
-      <button class="tab-btn" onclick="gasTab('carga')">🚚 Carga de tanque</button>
-      <button class="tab-btn" onclick="gasTab('stock')">📦 Stock actual</button>
+      <button class="tab-btn active" onclick="gasTab('ronda06')" ${esDirector?"style='opacity:.4;cursor:not-allowed;pointer-events:none'":""}>🕕 Ronda 06:00</button>
+      <button class="tab-btn" onclick="gasTab('tubos')" ${esDirector?"style='opacity:.4;cursor:not-allowed;pointer-events:none'":""}>🔵 Movimiento tubos</button>
+      <button class="tab-btn" onclick="gasTab('pedidoprov')" ${esDirector?"style='opacity:.4;cursor:not-allowed;pointer-events:none'":""}>📋 Tubos entregados</button>
+      <button class="tab-btn" onclick="gasTab('carga')" ${esDirector?"style='opacity:.4;cursor:not-allowed;pointer-events:none'":""}>🚚 Carga de tanque</button>
+      <button class="tab-btn ${esDirector?"active":""}" onclick="gasTab('stock')">📦 Stock actual</button>
     </div>
     <div id="gas-content"></div>
   `;
-  gasTab('ronda06');
+  gasTab('stock'); // director siempre ve stock
+  if (!esDirector) gasTab('ronda06');
 }
 
 function gasTab(tab) {
@@ -2638,11 +2647,11 @@ function renderFilaCola(activos) {
             <button style="background:none;border:1px solid var(--border);border-radius:6px;font-size:18px;cursor:pointer;padding:4px 8px;margin-bottom:6px;display:block;width:100%"
               onclick="leerPedido('${p.Servicio||""}','${(p.Descripcion||"").replace(/'/g,"").substring(0,120)}','${p.Urgencia||""}')"
               title="Escuchar pedido en voz alta">🔊</button>
-            ${p.Estado==="Pendiente" ? `
+            ${state.role !== "director" && p.Estado==="Pendiente" ? `
               <button class="btn btn-primary" style="font-size:11px;padding:6px 8px;display:block;width:100%;margin-bottom:5px" onclick="asumir('${p.ID}')">✋ Asumir</button>
               <button class="btn btn-danger" style="font-size:11px;padding:6px 8px;display:block;width:100%" onclick="rechazarPedidoModal('${p.ID}','${(p.Descripcion||"").substring(0,30)}')">⚠ Sin cap.</button>
             ` : ""}
-            ${p.Estado==="En curso" ? `
+            ${state.role !== "director" && p.Estado==="En curso" ? `
               <button class="btn btn-success" style="font-size:11px;padding:6px 8px;display:block;width:100%;margin-bottom:5px" onclick="cerrarPedidoModal('${p.ID}')">✓ Cerrar</button>
               <button class="btn btn-ghost" style="font-size:11px;padding:6px 8px;display:block;width:100%" onclick="observacionModal('${p.ID}')">📝 Observación</button>
             ` : ""}
@@ -3174,13 +3183,15 @@ async function renderRonda() {
       <div><div class="section-title">Registro de ronda</div><div class="section-sub">Turno: ${getTurnoActual()} · Operario: ${state.nombre}</div></div>
     </div>
     <div class="alert alert-info mb-16">⚠ Los ítems ya registrados hoy aparecen pre-marcados. Completá los que faltan y guardá parcial o completo.</div>
+    ${state.role === "director" ? '<div class="alert alert-warning mb-16">👁 Modo solo lectura — solo podés ver el estado de las rondas del día.</div>' : ""}
     ${RONDAS_ITEMS.map((sec, si) => `
       <div class="ronda-section">
         <div class="ronda-section-title">${sec.seccion}</div>
         ${sec.items.map((item, ii) => `
           <div class="ronda-item">
             <input type="checkbox" id="ri-${si}-${ii}" onchange="updateRondaItem(${si},${ii})"
-              ${window._rondasHoy && window._rondasHoy.some(r => r.Sector && r.Sector.trim() === item.sector.trim()) ? "checked" : ""}>
+              ${window._rondasHoy && window._rondasHoy.some(r => r.Sector && r.Sector.trim() === item.sector.trim()) ? "checked" : ""}
+              ${state.role==="director" ? "disabled style='opacity:.5'" : ""}>
             <div style="font-size:12px"><strong style="font-size:11px;color:var(--text2)">${item.sector}</strong><br>${item.tarea}</div>
             <select id="rs-${si}-${ii}" class="ronda-result" style="font-size:11px;padding:4px 4px;width:100%">
               <option value="">— resultado —</option>
@@ -3194,8 +3205,8 @@ async function renderRonda() {
       </div>`).join("")}
     <div style="margin-top:20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
       <div id="ronda-progress" style="font-size:13px;color:var(--text2)">0 / ${allItems.length} ítems completados</div>
-      <button class="btn btn-primary" onclick="enviarRonda(false)">💾 Guardar parcial</button>
-      <button class="btn btn-success" onclick="enviarRonda(true)">📋 Guardar ronda completa</button>
+      <button class="btn btn-primary" onclick="enviarRonda(false)" ${state.role==="director"?"disabled style='opacity:.4;cursor:not-allowed'":""}>💾 Guardar parcial</button>
+      <button class="btn btn-success" onclick="enviarRonda(true)" ${state.role==="director"?"disabled style='opacity:.4;cursor:not-allowed'":""}>📋 Guardar ronda completa</button>
     </div>
     <div style="font-size:11px;color:var(--text2);margin-top:6px">
       💡 Guardado parcial: registra solo los ítems marcados hasta el momento. Podés continuar la ronda más tarde.
