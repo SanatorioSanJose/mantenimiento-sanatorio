@@ -426,14 +426,15 @@ let state = {
 
 // ── DATE HELPERS ─────────────────────────────────────────────
 function hacerEnlaces(texto) {
-  // Convierte URLs en el texto en enlaces clickeables
   if (!texto || texto === "—") return texto;
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const urlRegex = /(https?:\/\/[^\s<>"]+)/g;
   return texto.replace(urlRegex, url => {
-    const label = url.includes("drive.google.com") ? "📄 Ver documento" :
+    const label = url.includes("drive.google.com/file") ? "📄 Ver documento" :
+                  url.includes("drive.google.com/drive") ? "📁 Ver carpeta" :
+                  url.includes("drive.google.com") ? "📄 Ver documento" :
                   url.includes("docs.google.com") ? "📝 Ver documento" :
                   url.includes("sheets.google.com") ? "📊 Ver planilla" : "🔗 Abrir enlace";
-    return `<a href="${url}" target="_blank" style="color:var(--cyan);font-weight:500;text-decoration:none">${label}</a>`;
+    return '<a href="' + url + '" target="_blank" style="color:var(--cyan);font-weight:500;text-decoration:none">' + label + '</a>';
   });
 }
 
@@ -3336,18 +3337,6 @@ function renderFilaProv(p) {
   </tr>`;
 }
 
-function hacerEnlaces(texto) {
-  if (!texto || texto === "—") return texto;
-  const urlRegex = /(https?:\/\/[^\s<>"]+)/g;
-  return texto.replace(urlRegex, url => {
-    const label = url.includes("drive.google.com/file") ? "📄 Ver documento" :
-                  url.includes("drive.google.com/drive") ? "📁 Ver carpeta" :
-                  url.includes("drive.google.com") ? "📄 Ver documento" :
-                  url.includes("docs.google.com") ? "📝 Ver documento" :
-                  url.includes("sheets.google.com") ? "📊 Ver planilla" : "🔗 Abrir enlace";
-    return '<a href="' + url + '" target="_blank" style="color:var(--cyan);font-weight:500;text-decoration:none">' + label + '</a>';
-  });
-}
 
 function renderFilaProv(p) {
   let telHtml = "—";
@@ -3436,7 +3425,7 @@ async function renderObleas() {
         <td style="font-size:12px">${o.Empresa||"—"}</td>
         <td style="font-size:12px;font-family:var(--mono)">${normalizarFecha(o.FechaVencimiento)||o.FechaVencimiento||"—"}</td>
         <td><span class="badge ${o.Estado==="VENCIDA"?"badge-urgent":o.Estado==="SIN REGISTRO"?"badge-pending":"badge-done"}">${o.Estado}</span></td>
-        <td style="font-size:12px;color:var(--text2)">${o.Observaciones||"—"}</td>
+        <td style="font-size:12px;color:var(--text2)">${hacerEnlaces(String(o.Observaciones||"—"))}</td>
       </tr>`).join("")}
       </tbody></table></div></div>`;
 }
