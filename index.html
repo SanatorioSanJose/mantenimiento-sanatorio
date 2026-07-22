@@ -388,7 +388,7 @@ tr:hover td { background: rgba(100,85,60,.06); }
       <button class="btn-logout" onclick="logout()">Cerrar sesión</button>
     </div>
     <div style="text-align:center;padding:8px 16px 12px;border-top:1px solid var(--border)">
-      <span style="font-family:'Edwardian Script ITC','Palatino Linotype','Book Antiqua',cursive;font-size:13px;color:var(--text3);font-style:italic">by Lic. Sebastian Espeche</span>
+      <span style="font-family:'Edwardian Script ITC','Palatino Linotype','Book Antiqua',cursive;font-size:16px;color:var(--text3);font-style:italic">by Lic. Sebastian Espeche</span>
     </div>
   </nav>
 
@@ -411,7 +411,7 @@ tr:hover td { background: rgba(100,85,60,.06); }
 // ═══════════════════════════════════════════════════════════
 // CONFIG — REEMPLAZAR CON TU URL DE GOOGLE APPS SCRIPT
 // ═══════════════════════════════════════════════════════════
-const API_URL = "https://script.google.com/macros/s/AKfycbwKzgoUgxe3iwRHFfjED4mKy3bz-aSl4uv0NQowCS5e7h287pLEfM1eyH-as6ANR4jD/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbw6sRnqXPZrgjnUKjAqf0pOsG5IG3lIs2OhUEdrqf3eSyMbfq7LJLXNdElG_pJRm-Vj/exec";
 
 // Todos los PINs se validan contra Google Sheets — no hay PINs hardcodeados
 const PINS_DEMO = {}; // vacío — toda validación va al servidor
@@ -856,7 +856,7 @@ function buildNav() {
     sections.push({
       label: "Dirección",
       items: [
-        { id:"pedido_supervisor", icon:"➕", label:"Crear pedido de trabajo" },
+        { id:"pedido_supervisor", icon:"➕", label:"Crear pedido de trabajo", disabled: true },
         { id:"tablero_supervisor", icon:"📌", label:"Tablero de novedades" },
       ]
     });
@@ -876,10 +876,13 @@ function buildNav() {
     <div class="nav-section">
       <div class="nav-label">${sec.label}</div>
       ${sec.items.map(item => `
-        <div class="nav-item" id="nav-${item.id}" onclick="navigate('${item.id}')">
+        <div class="nav-item ${item.disabled ? 'nav-item-disabled' : ''}" id="nav-${item.id}"
+          onclick="${item.disabled ? '' : `navigate('${item.id}')`}" 
+          style="${item.disabled ? 'opacity:.4;cursor:not-allowed;pointer-events:none' : ''}">
           <span class="nav-icon">${item.icon}</span>
           <span>${item.label}</span>
           ${item.badge ? `<span class="badge-count" id="badge-${item.badge}">0</span>` : ""}
+          ${item.disabled ? '<span style="font-size:9px;color:var(--text3);margin-left:auto">—</span>' : ""}
         </div>
       `).join("")}
     </div>
@@ -1798,10 +1801,16 @@ async function renderGasStock(c) {
           '</tr></thead>' +
           '<tbody>' + filasStock +
           '<tr style="border-top:2px solid rgba(45,125,210,.2)">' +
-            '<td style="padding:10px 6px"><strong>Batería de soporte (20 bocas)</strong><div style="font-size:11px;color:var(--text2)">Último conteo ronda 06:00</div></td>' +
+            '<td style="padding:10px 6px"><strong>Batería soporte O₂ medicinal (20 bocas)</strong><div style="font-size:11px;color:var(--text2)">Último conteo ronda 06:00</div></td>' +
             '<td style="text-align:center;font-family:var(--mono);font-size:18px;padding:10px 6px;color:var(--cyan)">' + (data.bateriaSoporte !== undefined ? data.bateriaSoporte : "—") + '</td>' +
             '<td style="text-align:center;font-family:var(--mono);padding:10px 6px;color:var(--text2)">20</td>' +
             '<td style="text-align:center;padding:10px 6px"><span class="badge ' + (parseInt(data.bateriaSoporte) >= 20 ? 'badge-done' : parseInt(data.bateriaSoporte) > 0 ? 'badge-warning' : 'badge-info') + '">' + (data.bateriaSoporte !== undefined ? (parseInt(data.bateriaSoporte) >= 20 ? 'Completa' : 'Parcial') : 'Sin datos') + '</span></td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td style="padding:10px 6px"><strong>Batería soporte Aire comprimido (14 bocas)</strong><div style="font-size:11px;color:var(--amber)">⚠ Soporte aprox. 4 horas · Último conteo ronda 06:00</div></td>' +
+            '<td style="text-align:center;font-family:var(--mono);font-size:18px;padding:10px 6px;color:var(--cyan)">' + (data.bateriaAire !== undefined ? data.bateriaAire : "—") + '</td>' +
+            '<td style="text-align:center;font-family:var(--mono);padding:10px 6px;color:var(--text2)">14</td>' +
+            '<td style="text-align:center;padding:10px 6px"><span class="badge ' + (parseInt(data.bateriaAire) >= 14 ? 'badge-done' : parseInt(data.bateriaAire) > 0 ? 'badge-warning' : 'badge-info') + '">' + (data.bateriaAire !== undefined ? (parseInt(data.bateriaAire) >= 14 ? 'Completa' : 'Parcial') : 'Sin datos') + '</span></td>' +
           '</tr>' +
           '</tbody>' +
         '</table>' +
@@ -2796,17 +2805,25 @@ async function confirmarRechazo(id, btn) {
 }
 
 function observacionModal(id) {
+  const pedido = window._colaData ? window._colaData.find(p => p.ID === id) : null;
+  const obsExistentes = pedido?.Observaciones || "";
+
   const overlay = document.createElement("div");
   overlay.className = "modal-overlay";
   overlay.innerHTML = `
     <div class="modal-box">
       <div class="modal-title">📝 Agregar observación al pedido</div>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:14px">
-        Esta observación quedará visible en el registro del pedido para que el servicio sepa el estado actual del trabajo.
-      </p>
+      ${obsExistentes ? `
+        <div style="margin-bottom:14px">
+          <div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:6px">📋 Observaciones registradas:</div>
+          <div style="background:var(--navy3);border-radius:6px;padding:10px 12px;font-size:12px;
+                      color:var(--text2);max-height:130px;overflow-y:auto;white-space:pre-wrap;
+                      border-left:3px solid var(--cyan)">${obsExistentes}</div>
+        </div>` : ""}
       <div class="form-group">
-        <label class="form-label">Observación *</label>
-        <textarea id="obs-texto" placeholder="Ej: Se solicitó repuesto, en espera de entrega. / Se detectó problema mayor, requiere empresa especializada. / Pendiente por falta de insumos..."></textarea>
+        <label class="form-label">Nueva observación *</label>
+        <textarea id="obs-texto" placeholder="Ej: Se solicitó repuesto, en espera de entrega. / Se detectó problema mayor..." style="min-height:90px"></textarea>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px">Se agregará a las observaciones anteriores sin borrarlas.</div>
       </div>
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
@@ -2972,7 +2989,7 @@ async function renderNovedades() {
           </select>
         </div>
         <div class="form-group"><label class="form-label">Novedad *</label><textarea id="nov-texto" placeholder="Describir la novedad para el turno entrante..."></textarea></div>
-        <button class="btn btn-primary" onclick="guardarNovedad()">📝 Guardar novedad</button>
+        <button class="btn btn-primary" onclick="guardarNovedad()" ${state.role==="director"?"disabled style='opacity:.4;cursor:not-allowed'":""}>📝 Guardar novedad</button>
       </div>
       <div class="card" id="novedades-lista">
         <div class="card-title">Novedades del día — todos los turnos</div>
