@@ -3306,7 +3306,7 @@ async function renderPersonal() {
         <td style="font-size:12px">${o.Horario}</td>
         <td style="font-size:12px">${o.FechaIngreso}</td>
         <td><span class="badge ${o.Estado==="Activo"?"badge-done":"badge-off"}">${o.Estado}</span></td>
-        <td style="font-size:12px;color:var(--text2)">${o.Observaciones||"—"}</td>
+        <td style="font-size:12px;color:var(--text2)">${hacerEnlaces(String(o.Observaciones||"—"))}</td>
       </tr>`).join("")}</tbody>
     </table></div>`;
 }
@@ -3338,9 +3338,11 @@ function renderFilaProv(p) {
 
 function hacerEnlaces(texto) {
   if (!texto || texto === "—") return texto;
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const urlRegex = /(https?:\/\/[^\s<>"]+)/g;
   return texto.replace(urlRegex, url => {
-    const label = url.includes("drive.google.com") ? "📄 Ver documento" :
+    const label = url.includes("drive.google.com/file") ? "📄 Ver documento" :
+                  url.includes("drive.google.com/drive") ? "📁 Ver carpeta" :
+                  url.includes("drive.google.com") ? "📄 Ver documento" :
                   url.includes("docs.google.com") ? "📝 Ver documento" :
                   url.includes("sheets.google.com") ? "📊 Ver planilla" : "🔗 Abrir enlace";
     return '<a href="' + url + '" target="_blank" style="color:var(--cyan);font-weight:500;text-decoration:none">' + label + '</a>';
@@ -3414,17 +3416,17 @@ async function renderObleas() {
     <div id="obleas-table"><div class="text-muted">Cargando...</div></div>`;
   const data = await api({ action:"getObleas" });
   const items = Array.isArray(data) && data.length>0 ? data : [
-    {Item:"Ascensores",Empresa:"CULMEN SRL",FechaVencimiento:"31/12/2025",Estado:"VENCIDA",Observaciones:"Gestor presentado — verificar identidad"},
+    {Item:"Ascensores",Empresa:"CULMEN SRL",FechaVencimiento:"31/12/2025",Estado:"VENCIDA",Observaciones:"Gestor presentado — verificar identidad antes de autorizar ingreso"},
     {Item:"Instalaciones Fijas LCI",Empresa:"MATAFUEGOS LUGANO SRL",FechaVencimiento:"31/12/2025",Estado:"VENCIDA",Observaciones:"Renovar antes 31/03"},
-    {Item:"Calderas",Empresa:"A confirmar",FechaVencimiento:"31/12/2025",Estado:"VENCIDA",Observaciones:"Sin empresa conservadora registrada"},
+    {Item:"Campana de extracción (cocina)",Empresa:"A confirmar",FechaVencimiento:"31/12/2025",Estado:"VENCIDA",Observaciones:"Sin empresa conservadora registrada"},
+    {Item:"Instalaciones Térmicas (calderas)",Empresa:"A confirmar",FechaVencimiento:"31/12/2025",Estado:"VENCIDA",Observaciones:"Sin empresa conservadora registrada"},
     {Item:"Tanques de agua",Empresa:"A confirmar",FechaVencimiento:"31/12/2025",Estado:"VENCIDA",Observaciones:"Sin empresa conservadora registrada"},
-    {Item:"Campana de extracción",Empresa:"A confirmar",FechaVencimiento:"31/12/2025",Estado:"VENCIDA",Observaciones:""},
     {Item:"Fachada",Empresa:"A confirmar",FechaVencimiento:"31/12/2025",Estado:"VENCIDA",Observaciones:""},
     {Item:"Cert. hidráulico AUTOCLAVE",Empresa:"FRATECNO",FechaVencimiento:"Pendiente",Estado:"SIN REGISTRO",Observaciones:"Gestionar estudio urgente"},
     {Item:"Cert. hidráulico CALDERA",Empresa:"A confirmar",FechaVencimiento:"Pendiente",Estado:"SIN REGISTRO",Observaciones:"Gestionar estudio urgente"},
     {Item:"Certificación toma a tierra",Empresa:"A confirmar",FechaVencimiento:"Pendiente",Estado:"SIN REGISTRO",Observaciones:""},
     {Item:"Carga de fuego",Empresa:"A confirmar",FechaVencimiento:"Pendiente",Estado:"SIN REGISTRO",Observaciones:""},
-    {Item:"Simulacro de evacuación",Empresa:"A confirmar",FechaVencimiento:"Pendiente",Estado:"SIN REGISTRO",Observaciones:"Obligatorio CCT y normativa CABA"},
+    {Item:"Simulacro de evacuación",Empresa:"A confirmar",FechaVencimiento:"Pendiente",Estado:"SIN REGISTRO",Observaciones:"Obligatorio según CCT y normativa CABA"},
   ];
   document.getElementById("obleas-table").innerHTML = `
     <div class="card"><div class="tbl-wrap"><table>
@@ -3432,7 +3434,7 @@ async function renderObleas() {
       <tbody>${items.map(o=>`<tr>
         <td><strong>${o.Item}</strong></td>
         <td style="font-size:12px">${o.Empresa||"—"}</td>
-        <td style="font-size:12px;font-family:var(--mono)">${o.FechaVencimiento||"—"}</td>
+        <td style="font-size:12px;font-family:var(--mono)">${normalizarFecha(o.FechaVencimiento)||o.FechaVencimiento||"—"}</td>
         <td><span class="badge ${o.Estado==="VENCIDA"?"badge-urgent":o.Estado==="SIN REGISTRO"?"badge-pending":"badge-done"}">${o.Estado}</span></td>
         <td style="font-size:12px;color:var(--text2)">${o.Observaciones||"—"}</td>
       </tr>`).join("")}
