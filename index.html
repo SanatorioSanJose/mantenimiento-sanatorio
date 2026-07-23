@@ -2308,7 +2308,32 @@ function drawCharts(stats) {
 
   const chartOpts = {
     responsive:true, maintainAspectRatio:true,
-    plugins:{ legend:{ labels:{ color:textColor, font:{size:11}, padding:12 } } }
+    animation: {
+      duration: 1200,
+      easing: 'easeInOutQuart',
+    },
+    plugins:{
+      legend:{ labels:{ color:textColor, font:{size:11}, padding:12 } }
+    }
+  };
+
+  // Animación especial para tortas — giran al entrar
+  const animPie = {
+    animation: {
+      animateRotate: true,
+      animateScale: true,
+      duration: 1400,
+      easing: 'easeInOutBack',
+    }
+  };
+
+  // Animación para barras — crecen desde abajo
+  const animBar = {
+    animation: {
+      duration: 1000,
+      easing: 'easeOutBounce',
+      delay: (ctx) => ctx.dataIndex * 80,
+    }
   };
 
   const COLORS = ["#1a6bb5","#c47a00","#1e8a4a","#c0392b","#0a8a9a","#7d3c98"];
@@ -2321,6 +2346,7 @@ function drawCharts(stats) {
     new Chart(ctx1, {
       type: "doughnut",
       plugins: [shadow3DPlugin],
+      ...animPie,
       data: {
         labels: ["Resueltos","Trabajos propios","Pendientes","En curso"],
         datasets: [{
@@ -2353,6 +2379,7 @@ function drawCharts(stats) {
     new Chart(ctx3, {
       type: "bar",
       plugins: [shadow3DPlugin],
+      ...animBar,
       data: {
         labels: Object.keys(opData).map(n => n.split(" ")[0]),
         datasets: [{
@@ -2386,6 +2413,7 @@ function drawCharts(stats) {
     new Chart(ctx4, {
       type: "doughnut",
       plugins: [shadow3DPlugin],
+      ...animPie,
       data: {
         labels: ["Completadas","Pendientes"],
         datasets: [{
@@ -2415,6 +2443,7 @@ function drawCharts(stats) {
     new Chart(ctx2, {
       type: "pie",
       plugins: [shadow3DPlugin],
+      ...animPie,
       data: {
         labels: Object.keys(urgData),
         datasets: [{
