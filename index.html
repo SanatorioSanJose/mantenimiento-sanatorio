@@ -102,7 +102,12 @@ html, body { height: 100%; background: var(--navy); color: var(--text); font-fam
 .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 
 /* ── STAT CHIPS ── */
-.stat-chip { background: var(--navy3); border: 1px solid var(--border); border-radius: 8px; padding: 16px; text-align: center; }
+.stat-chip { background: var(--navy3); border: 1px solid var(--border); border-radius: 8px; padding: 16px; text-align: center; animation: chipEntrada 0.5s ease-out both; }
+@keyframes chipEntrada { from { opacity:0; transform:translateY(-12px); } to { opacity:1; transform:translateY(0); } }
+.stat-chip:nth-child(1) { animation-delay:0s; }
+.stat-chip:nth-child(2) { animation-delay:0.1s; }
+.stat-chip:nth-child(3) { animation-delay:0.2s; }
+.stat-chip:nth-child(4) { animation-delay:0.3s; }
 .stat-num { font-family: var(--mono); font-size: 28px; font-weight: 500; }
 .stat-label { font-size: 11px; color: var(--text2); margin-top: 4px; text-transform: uppercase; letter-spacing: .07em; }
 
@@ -248,7 +253,12 @@ tr:hover td { background: rgba(100,85,60,.06); }
 
 /* ── CHARTS ── */
 .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-.chart-box { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+.chart-box { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; animation: chartEntrada 0.7s ease-out both; }
+@keyframes chartEntrada { from { opacity:0; transform:translateY(20px) scale(0.96); } to { opacity:1; transform:translateY(0) scale(1); } }
+.chart-box:nth-child(1) { animation-delay:0s; }
+.chart-box:nth-child(2) { animation-delay:0.15s; }
+.chart-box:nth-child(3) { animation-delay:0.30s; }
+.chart-box:nth-child(4) { animation-delay:0.45s; }
 .chart-box canvas { max-height: 200px; }
 
 /* ── TABS ── */
@@ -2194,11 +2204,15 @@ async function renderDashboard() {
 
   // Stats
   if (stats && stats.ok !== false) {
-    const totalInt = stats.totalIntervenciones || stats.total || 0;
-    const totalProp = stats.totalPropios || 0;
+    const totalPend = stats.pendientes || 0;
+    const totalCurso = stats.enCurso || 0;
+    const totalRes = stats.resueltos || 0;
     const totalPed = stats.total || 0;
+    const totalProp = stats.totalPropios || 0;
+    const sinCap = totalPed - totalPend - totalCurso - totalRes; // los que no entran en ninguna categoría
+    const totalInt = totalPed + totalProp;
     document.getElementById("s-intervenciones").textContent = totalInt;
-    document.getElementById("s-desglose").textContent = totalPed + " pedidos + " + totalProp + " propios";
+    document.getElementById("s-desglose").textContent = totalRes + " resueltos + " + totalPend + " pendientes + " + totalCurso + " en curso" + (sinCap > 0 ? " + " + sinCap + " sin cap." : "") + " + " + totalProp + " propios";
     document.getElementById("s-pend").textContent = stats.pendientes || 0;
     document.getElementById("s-enc").textContent = stats.enCurso || 0;
     document.getElementById("s-res").textContent = stats.resueltos || 0;
