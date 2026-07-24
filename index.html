@@ -423,7 +423,7 @@ tr:hover td { background: rgba(100,85,60,.06); }
 // ═══════════════════════════════════════════════════════════
 // CONFIG — REEMPLAZAR CON TU URL DE GOOGLE APPS SCRIPT
 // ═══════════════════════════════════════════════════════════
-const API_URL = "https://script.google.com/macros/s/AKfycbxxRVMhhNknfCK0TQt1oOqHmdFE6YmncgMcn_6a13KUZE7XQIJagE9l8BkuIE5ync-D/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwVR3VcV1SKdZIktk2GFQJQ8jP_wpLo-AMQDLyXFMGKcdgSMTQTi4Dte05tpfyOMnw/exec";
 
 // Todos los PINs se validan contra Google Sheets — no hay PINs hardcodeados
 const PINS_DEMO = {}; // vacío — toda validación va al servidor
@@ -2428,32 +2428,62 @@ function drawCharts(stats) {
     });
   }
 
-  // ── RONDAS HOY — doughnut 3D ─────────────────────────────────
+  // ── RONDAS HOY — barras por turno ───────────────────────────
   const ctx4 = document.getElementById("chart-rondas");
   const rondasTotal = stats.rondasTotal || 19;
-  const rondasHoy = stats.rondasHoy || 0;
-  const pct = Math.min(100, Math.round(rondasHoy / rondasTotal * 100));
+  const rondasNoche = Math.min(rondasTotal, stats.rondasNoche || 0);
+  const rondasDiurno = Math.min(rondasTotal, stats.rondasDiurno || 0);
+  const pctNoche = Math.round(rondasNoche / rondasTotal * 100);
+  const pctDiurno = Math.round(rondasDiurno / rondasTotal * 100);
+
+  // Actualizar el título del chart con porcentajes
+  const chartRondasBox = ctx4?.closest(".chart-box");
+  if (chartRondasBox) {
+    const titulo = chartRondasBox.querySelector(".card-title");
+    if (titulo) titulo.innerHTML = `Rondas hoy
+      <span style="font-size:11px;font-weight:400;color:var(--text2);margin-left:8px">
+        🌙 ${pctNoche}% &nbsp;☀️ ${pctDiurno}%
+      </span>`;
+  }
+
   if (ctx4) {
     new Chart(ctx4, {
-      type: "doughnut",
+      type: "bar",
       plugins: [shadow3DPlugin],
-      ...animPie,
+      ...animBar,
       data: {
-        labels: ["Completadas","Pendientes"],
+        labels: ["🌙 Turno Noche
+(21:00–10:00)", "☀️ Turno Diurno
+(10:00–20:30)"],
         datasets: [{
-          data: [pct, 100-pct],
-          backgroundColor: [lighten("#0a8a9a",10), "#e0d9cc"],
-          borderColor: [darken("#0a8a9a",20), "#c8bfb0"],
+          label: "Ítems completados",
+          data: [rondasNoche, rondasDiurno],
+          backgroundColor: [lighten("#0a8a9a",10), lighten("#1a6bb5",10)],
+          borderColor: [darken("#0a8a9a",20), darken("#1a6bb5",20)],
           borderWidth: 2,
-          hoverOffset: 8,
+          borderRadius: 8,
+          borderSkipped: false,
+        },{
+          label: "Pendientes",
+          data: [rondasTotal - rondasNoche, rondasTotal - rondasDiurno],
+          backgroundColor: ["rgba(200,191,176,0.3)", "rgba(200,191,176,0.3)"],
+          borderColor: ["#c8bfb0","#c8bfb0"],
+          borderWidth: 1,
+          borderRadius: 8,
+          borderSkipped: false,
         }]
       },
       options: {
         ...chartOpts,
-        cutout: "60%",
+        scales: {
+          x: { stacked: true, ticks:{ color:textColor, font:{size:10} }, grid:{display:false} },
+          y: { stacked: true, max: rondasTotal, ticks:{ color:textColor, font:{size:10}, stepSize:5 }, grid:{color:gridColor} }
+        },
         plugins: {
-          ...chartOpts.plugins,
-          tooltip: { callbacks: { label: ctx => " " + ctx.label + ": " + ctx.raw + "%" } }
+          legend: { display: false },
+          tooltip: { callbacks: {
+            label: (ctx) => ctx.dataset.label + ": " + ctx.raw + " de " + rondasTotal + " ítems"
+          }}
         }
       }
     });
@@ -3381,8 +3411,19 @@ function getTurnoAnteriorYFecha() {
 async function renderRonda() {
   // Cargar rondas ya registradas hoy para pre-tildar
   document.getElementById("content").innerHTML = '<div class="text-muted" style="padding:20px">Cargando estado de rondas del día...</div>';
+  // Cargar rondas: hoy + ayer si son antes de las 10:00 (turno noche)
   const rondasData = await api({ action:"getRondasHoy" });
-  window._rondasHoy = Array.isArray(rondasData) ? rondasData : [];
+  let rondasBase = Array.isArray(rondasData) ? rondasData : [];
+
+  const horaActual = new Date().getHours();
+  if (horaActual < 10) {
+    // Incluir rondas de ayer para el turno noche
+    const rondasAyer = await api({ action:"getRondasAyer" });
+    if (Array.isArray(rondasAyer)) {
+      rondasBase = [...rondasBase, ...rondasAyer];
+    }
+  }
+  window._rondasHoy = rondasBase;
 
   const RONDAS_ITEMS = [
     { seccion:"1. Salas de máquinas y tablero eléctrico", items:[
