@@ -423,7 +423,7 @@ tr:hover td { background: rgba(100,85,60,.06); }
 // ═══════════════════════════════════════════════════════════
 // CONFIG — REEMPLAZAR CON TU URL DE GOOGLE APPS SCRIPT
 // ═══════════════════════════════════════════════════════════
-const API_URL = "https://script.google.com/macros/s/AKfycbwVR3VcV1SKdZIktk2GFQJQ8jP_wpLo-AMQDLyXFMGKcdgSMTQTi4Dte05tpfyOMnw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxhU791TsEiFnKQ458oJGP4Xjo1sMbOJnkq0coeDKvGvDwTdrTUzy0BJBn6VWV5pw-f/exec";
 
 // Todos los PINs se validan contra Google Sheets — no hay PINs hardcodeados
 const PINS_DEMO = {}; // vacío — toda validación va al servidor
@@ -2452,7 +2452,7 @@ function drawCharts(stats) {
       plugins: [shadow3DPlugin],
       ...animBar,
       data: {
-        labels: ["🌙 Noche (21:00–10:00)", "☀️ Diurno (10:00–20:30)"],
+        labels: ["🌙 Ronda nocturna (21:00–07:00)", "☀️ Ronda diurna (07:00–21:00)"],
         datasets: [{
           label: "Ítems completados",
           data: [rondasNoche, rondasDiurno],
@@ -3409,19 +3409,9 @@ function getTurnoAnteriorYFecha() {
 async function renderRonda() {
   // Cargar rondas ya registradas hoy para pre-tildar
   document.getElementById("content").innerHTML = '<div class="text-muted" style="padding:20px">Cargando estado de rondas del día...</div>';
-  // Cargar rondas: hoy + ayer si son antes de las 10:00 (turno noche)
+  // Cargar rondas del día actual
   const rondasData = await api({ action:"getRondasHoy" });
-  let rondasBase = Array.isArray(rondasData) ? rondasData : [];
-
-  const horaActual = new Date().getHours();
-  if (horaActual < 10) {
-    // Incluir rondas de ayer para el turno noche
-    const rondasAyer = await api({ action:"getRondasAyer" });
-    if (Array.isArray(rondasAyer)) {
-      rondasBase = [...rondasBase, ...rondasAyer];
-    }
-  }
-  window._rondasHoy = rondasBase;
+  window._rondasHoy = Array.isArray(rondasData) ? rondasData : [];
 
   const RONDAS_ITEMS = [
     { seccion:"1. Salas de máquinas y tablero eléctrico", items:[
