@@ -423,7 +423,7 @@ tr:hover td { background: rgba(100,85,60,.06); }
 // ═══════════════════════════════════════════════════════════
 // CONFIG — REEMPLAZAR CON TU URL DE GOOGLE APPS SCRIPT
 // ═══════════════════════════════════════════════════════════
-const API_URL = "https://script.google.com/macros/s/AKfycbxhU791TsEiFnKQ458oJGP4Xjo1sMbOJnkq0coeDKvGvDwTdrTUzy0BJBn6VWV5pw-f/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwqRdoLa98lLD_C_FASTnir5UqhiD_VHyzp05nivkoz-ny7ZqjLizXh8hFvDmV-mzRM/exec";
 
 // Todos los PINs se validan contra Google Sheets — no hay PINs hardcodeados
 const PINS_DEMO = {}; // vacío — toda validación va al servidor
@@ -835,6 +835,7 @@ function buildNav() {
         { id:"novedades", icon:"📝", label:"Novedades de turno" },
         { id:"oxigeno", icon:"🫧", label:"Gestión de gases" },
         { id:"proveedores", icon:"📞", label:"Proveedores" },
+        { id:"req_personal", icon:"📋", label:"Solicitudes al personal" },
 
       ]
     });
@@ -914,6 +915,7 @@ function navigate(page) {
     traspaso:"Traspaso de Guardia",
     novedades:"Novedades de turno", personal:"Nómina del personal", proveedores:"Proveedores y servicios",
     obleas:"Obleas y vencimientos", servicios_admin:"Gestión de servicios / PINs",
+    req_personal:"Solicitudes al personal",
     req_personal_admin:"Solicitudes del personal", requerimientos_personal:"Mis solicitudes",
     pedido_supervisor:"Crear pedido de trabajo",
     tablero_supervisor:"Tablero de novedades del jefe",
@@ -934,6 +936,7 @@ function navigate(page) {
     proveedores: renderProveedores,
     obleas: renderObleas,
     servicios_admin: renderServiciosAdmin,
+    req_personal: renderRequerimientosPersonal,
     req_personal_admin: renderReqPersonalAdmin,
     requerimientos_personal: renderRequerimientosPersonal,
     pedido_supervisor: renderPedidoSupervisor,
@@ -1215,7 +1218,7 @@ async function enviarPedidoSupervisor() {
   // Crear el pedido
   const res = await api({
     action: "nuevoPedido",
-    servicio: "Supervisión — " + state.nombre,
+    servicio: "Jefe de Mantenimiento",
     solicitante: state.nombre,
     descripcion: desc + " — Sector: " + sector + (obs ? " · " + obs : ""),
     urgencia,
