@@ -729,11 +729,23 @@ function renderPinDisplay() {
 async function attemptLogin() {
   const pin = state.pinBuffer;
   const err = document.getElementById("login-error");
-  err.textContent = "";
   err.textContent = "Verificando...";
 
-  // Validar contra Google Sheets
-  const res = await api({ action:"validarPIN", pin });
+  // Intentar hasta 3 veces si el servidor tarda
+  let res = null;
+  for (let intento = 1; intento <= 3; intento++) {
+    try {
+      res = await api({ action:"validarPIN", pin });
+      if (res && res.ok) break; // éxito
+      if (intento < 3) {
+        err.textContent = "Verificando... (intento " + intento + "/3)";
+        await new Promise(r => setTimeout(r, 1500)); // esperar 1.5s antes de reintentar
+      }
+    } catch(e) {
+      if (intento === 3) break;
+      await new Promise(r => setTimeout(r, 1500));
+    }
+  }
 
   if (res && res.ok) {
     state.role    = res.role    || "operario";
