@@ -104,6 +104,8 @@ html, body { height: 100%; background: var(--navy); color: var(--text); font-fam
 /* ── STAT CHIPS ── */
 .stat-chip { background: var(--navy3); border: 1px solid var(--border); border-radius: 8px; padding: 16px; text-align: center; animation: chipEntrada 0.5s ease-out both; }
 @keyframes chipEntrada { from { opacity:0; transform:translateY(-12px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+@keyframes scaleIn { from { transform:scale(0.5); opacity:0; } to { transform:scale(1); opacity:1; } }
 .stat-chip:nth-child(1) { animation-delay:0s; }
 .stat-chip:nth-child(2) { animation-delay:0.1s; }
 .stat-chip:nth-child(3) { animation-delay:0.2s; }
@@ -2579,6 +2581,184 @@ function detenerAudio() {
   if ('speechSynthesis' in window) window.speechSynthesis.cancel();
 }
 
+// ── SONIDOS DE MOTIVACIÓN ────────────────────────────────────
+function reproducirSonidoAliento() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Melodía ascendente de aliento (3 notas que suben)
+    const notas = [440, 554, 659, 880];
+    notas.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = "sine";
+      const t = ctx.currentTime + i * 0.12;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.3, t + 0.04);
+      gain.gain.linearRampToValueAtTime(0, t + 0.18);
+      osc.start(t); osc.stop(t + 0.2);
+    });
+  } catch(e) {}
+}
+
+function reproducirSonidoAplausos() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Simular aplausos con ruido blanco en ráfagas
+    const duracion = 1.8;
+    const buffer = ctx.createBuffer(1, ctx.sampleRate * duracion, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      // Ráfagas de ruido (aplausos)
+      const t = i / ctx.sampleRate;
+      const rafaga = Math.sin(t * 8) > 0.3 ? 1 : 0.1;
+      data[i] = (Math.random() * 2 - 1) * rafaga * 0.4;
+    }
+    const src = ctx.createBufferSource();
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = 2000;
+    filter.Q.value = 0.5;
+    src.buffer = buffer;
+    src.connect(filter); filter.connect(ctx.destination);
+    src.start();
+    src.stop(ctx.currentTime + duracion);
+  } catch(e) {}
+}
+
+// Ovación alternada (aplausos + melodía)
+let _cierresCount = 0;
+function reproducirSonidoCierre() {
+  _cierresCount++;
+  if (_cierresCount % 3 === 0) {
+    // Cada 3 cierres: melodía de victoria
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const notas = [523, 659, 784, 1047, 784, 1047];
+      const duraciones = [0.15, 0.15, 0.15, 0.4, 0.15, 0.5];
+      let t = ctx.currentTime;
+      notas.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = freq;
+        osc.type = "triangle";
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.3, t + 0.03);
+        gain.gain.linearRampToValueAtTime(0, t + duraciones[i]);
+        osc.start(t); osc.stop(t + duraciones[i] + 0.05);
+        t += duraciones[i] + 0.02;
+      });
+    } catch(e) {}
+  } else {
+    reproducirSonidoAplausos();
+  }
+}
+
+
+function lanzarConfetti() {
+  const colores = ["#1a6bb5","#0a8a9a","#1e8a4a","#c47a00","#c0392b","#9b59b6","#f39c12","#2ecc71"];
+  const canvas = document.createElement("canvas");
+  canvas.style.cssText = "position:fixed;inset:0;z-index:399;pointer-events:none;width:100%;height:100%";
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext("2d");
+
+  const particulas = Array.from({length: 120}, () => ({
+    x: Math.random() * canvas.width,
+    y: -20 - Math.random() * 100,
+    w: 8 + Math.random() * 10,
+    h: 4 + Math.random() * 6,
+    color: colores[Math.floor(Math.random() * colores.length)],
+    rot: Math.random() * Math.PI * 2,
+    vx: (Math.random() - 0.5) * 4,
+    vy: 2 + Math.random() * 4,
+    vrot: (Math.random() - 0.5) * 0.2,
+    alpha: 1,
+    forma: Math.random() > 0.5 ? "rect" : "circle",
+  }));
+
+  let frame = 0;
+  function animar() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let activas = 0;
+    particulas.forEach(p => {
+      if (p.y > canvas.height + 20) return;
+      activas++;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.08; // gravedad
+      p.rot += p.vrot;
+      if (p.y > canvas.height * 0.7) p.alpha = Math.max(0, p.alpha - 0.02);
+      ctx.save();
+      ctx.globalAlpha = p.alpha;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      if (p.forma === "circle") {
+        ctx.beginPath();
+        ctx.arc(0, 0, p.w/2, 0, Math.PI*2);
+        ctx.fill();
+      } else {
+        ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      }
+      ctx.restore();
+    });
+    frame++;
+    if (frame < 180) requestAnimationFrame(animar);
+    else canvas.remove();
+  }
+  animar();
+}
+
+function mostrarTarjetaAgradecimiento() {
+  const frases = [
+    { emoji:"🏆", titulo:"¡Trabajo completado!", msg:"El servicio puede funcionar correctamente. Eso es lo que hace grande a este equipo." },
+    { emoji:"💪", titulo:"¡Excelente!", msg:"Un problema menos para el sanatorio. Tu trabajo marca la diferencia todos los días." },
+    { emoji:"⭐", titulo:"¡Bien hecho!", msg:"Cada trabajo resuelto es un paciente mejor atendido. ¡Seguís sumando!" },
+    { emoji:"🙌", titulo:"¡Gracias!", msg:"Los pacientes y el personal del sanatorio lo valoran, aunque no siempre lo digan." },
+    { emoji:"🎯", titulo:"¡Objetivo cumplido!", msg:"Profesionalismo en acción. Así se trabaja en Mantenimiento." },
+    { emoji:"🚀", titulo:"¡Eso es!", msg:"Rápido, eficiente y resuelto. El sanatorio funciona gracias a vos." },
+    { emoji:"❤️", titulo:"¡Muchas gracias!", msg:"Tu dedicación hace que todo funcione. No pasa desapercibido." },
+    { emoji:"🔧", titulo:"¡Misión cumplida!", msg:"Lo que estaba roto, volvió a funcionar. Eso tiene mucho valor." },
+    { emoji:"🌟", titulo:"¡Sobresaliente!", msg:"Otro trabajo más en el registro. El historial habla por sí solo." },
+    { emoji:"👏", titulo:"¡Muy bien!", msg:"El sanatorio necesita gente como vos. Seguí así." },
+    { emoji:"🏥", titulo:"¡El sanatorio te agradece!", msg:"Cada intervención cuenta para que los pacientes reciban la mejor atención." },
+    { emoji:"💯", titulo:"¡100% profesional!", msg:"Asumiste el trabajo y lo resolviste. Eso es lo que se espera y vos lo cumplís." },
+  ];
+  const f = frases[Math.floor(Math.random() * frases.length)];
+
+  lanzarConfetti();
+
+  const overlay = document.createElement("div");
+  overlay.style.cssText = `
+    position:fixed;inset:0;z-index:400;
+    display:flex;align-items:center;justify-content:center;padding:20px;
+    animation:fadeIn 0.3s ease;
+  `;
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:2px solid var(--green);border-radius:16px;
+                padding:32px 28px;max-width:380px;width:100%;text-align:center;
+                box-shadow:0 20px 60px rgba(0,0,0,0.3);
+                animation:scaleIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275)">
+      <div style="font-size:52px;margin-bottom:10px">${f.emoji}</div>
+      <div style="font-size:20px;font-weight:700;color:var(--green);margin-bottom:12px">${f.titulo}</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:24px">${f.msg}</div>
+      <button onclick="this.closest('div[style*=z-index:400]').remove()"
+        style="background:var(--green);color:#fff;border:none;border-radius:8px;
+               padding:12px 32px;font-size:14px;font-weight:600;cursor:pointer;
+               box-shadow:0 4px 12px rgba(30,138,74,0.4)">
+        ¡Gracias! Seguimos 💪
+      </button>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 5000);
+}
+
+
 // ── COLA DE PEDIDOS (OPERARIOS) ──────────────────────────────
 async function renderCola() {
   document.getElementById("content").innerHTML = `
@@ -2730,6 +2910,7 @@ async function asumir(id) {
   const res = await api({ action:"asignarPedido", id, operario: state.nombre });
 
   if (res && res.ok !== false) {
+    reproducirSonidoAliento();
     // Buscar datos del pedido en la lista actual para mostrar en el modal
     const fila = document.querySelector(`button[onclick="asumir('${id}')"]`)?.closest("tr");
     const celdas = fila ? fila.querySelectorAll("td") : [];
@@ -2907,7 +3088,7 @@ async function confirmarCierre(id, btn) {
   const obs = document.getElementById("m-obs").value;
   const res = await api({ action:"cerrarPedido", id, materiales:mat, observaciones:obs });
   btn.closest(".modal-overlay").remove();
-  if (res && res.ok !== false) { showAlert("success","✓ Trabajo cerrado correctamente"); renderCola(); }
+  if (res && res.ok !== false) { reproducirSonidoCierre(); mostrarTarjetaAgradecimiento(); renderCola(); }
   else showAlert("danger","Error al cerrar");
 }
 
