@@ -337,8 +337,9 @@ tr:hover td { background: rgba(100,85,60,.06); }
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
   .charts-row { grid-template-columns: 1fr; }
   #content { padding: 16px; }
-  #topbar-logo { display: block; max-width: calc(100% - 240px); }
-  #topbar-logo img { height: 22px !important; }
+  #topbar-logo { display: block; max-width: calc(100% - 200px); }
+  #topbar-logo img { height: 20px !important; }
+  .topbar-title { font-size: 11px !important; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 
 /* ── NOTIFICACION BANNER ── */
@@ -2030,11 +2031,8 @@ function mostrarBienvenidaServicio() {
     countdown--;
     if (countdown <= 0) {
       clearInterval(interval);
-      // Mostrar cartel de agradecimiento al terminar
-      if (overlay.parentNode) {
-        overlay.remove();
-        mostrarAgradecimientoServicio();
-      }
+      // Cerrar y mostrar formulario directamente
+      if (overlay.parentNode) overlay.remove();
       return;
     }
     const mins = Math.floor(countdown / 60);
