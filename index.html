@@ -449,7 +449,7 @@ tr:hover td { background: rgba(100,85,60,.06); }
 // ═══════════════════════════════════════════════════════════
 // CONFIG — REEMPLAZAR CON TU URL DE GOOGLE APPS SCRIPT
 // ═══════════════════════════════════════════════════════════
-const API_URL = "https://script.google.com/macros/s/AKfycbzYalMjz19RgS8s3lOm769d8jPyPNe7SRsyqE22Zg0u2AP8p55VN0cPdrti4PKFwkVz/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzuooct8ABC13RQSao6GsdLCiazQZueNe0c-59Kq4TWAucUm_PRq_fb80n-3XW1qLWz/exec";
 
 // Todos los PINs se validan contra Google Sheets — no hay PINs hardcodeados
 const PINS_DEMO = {}; // vacío — toda validación va al servidor
@@ -779,6 +779,7 @@ async function attemptLogin() {
     state.legajo  = res.legajo  || "";
     state.servicio= res.servicio|| "";
     state.noOxigeno = res.noOxigeno || false;
+    state.filtroTareas = res.filtroTareas || "";
     err.textContent = "";
     launchApp();
   } else {
@@ -3219,16 +3220,31 @@ async function renderCola() {
     {ID:"PED-003",Fecha:"26/05/2025",Hora:"07:55",Servicio:"Quirófano",Solicitante:"Martínez, Ana",Descripcion:"Termostato sala 2 no responde",Urgencia:"Alta",Estado:"En curso",OperarioAsignado:"García"},
   ];
   state.pedidos = data;
-  const activos = data.filter(p => p.Estado !== "Resuelto")
+  let activos = data.filter(p => p.Estado !== "Resuelto")
     .sort((a, b) => {
-      // Ordenar por fecha y hora descendente (más nuevo primero)
       const fa = (a.Fecha||"").split("/").reverse().join("") + (a.Hora||"").replace(":","");
       const fb = (b.Fecha||"").split("/").reverse().join("") + (b.Hora||"").replace(":","");
       return fb.localeCompare(fa);
     });
 
+  // Filtro de tareas para operarios con restricción (ej: Roque Albarracin)
+  if (state.filtroTareas) {
+    const palabras = state.filtroTareas.toLowerCase().split(",").map(p => p.trim()).filter(Boolean);
+    activos = activos.filter(p => {
+      const desc = (p.Descripcion || "").toLowerCase();
+      return palabras.some(palabra => desc.includes(palabra));
+    });
+  }
+
   const badge = document.getElementById("badge-pedidos");
   if(badge) badge.textContent = activos.filter(p=>p.Estado==="Pendiente").length;
+
+  // Aviso si cola está filtrada
+  if (state.filtroTareas && activos.length === 0) {
+    document.getElementById("cola-content").innerHTML =
+      '<div class="alert alert-info">No hay pedidos pendientes que correspondan a tu perfil de tareas.</div>';
+    return;
+  }
 
   // Poblar selector de operarios con los que tienen trabajos asignados
   const operariosFiltro = document.getElementById("filtro-operario");
