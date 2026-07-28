@@ -1288,14 +1288,6 @@ async function renderOxigeno() {
       <div class="section-sub">Oxígeno líquido · Tubos · Movimientos</div></div>
     </div>
     ${esDirector ? '<div class="alert alert-warning mb-8">👁 Modo solo lectura — Dirección. Solo podés consultar el stock actual.</div>' : ""}
-    <div style="background:rgba(192,57,43,.08);border:1px solid rgba(192,57,43,.35);border-left:4px solid var(--red);
-                border-radius:6px;padding:12px 16px;margin-bottom:12px">
-      <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:4px">⚠ Recordatorio — Stock mínimo de oxígeno medicinal</div>
-      <div style="font-size:12px;color:var(--text2);line-height:1.6">
-        Se debe contar con respaldo de tubos de oxígeno medicinal para <strong style="color:var(--text)">DOCE (12) camas</strong>.
-        Fin de semana: <strong style="color:var(--text)">TREINTA Y SEIS (36) tubos</strong>.
-      </div>
-    </div>
     <div class="tabs" id="gas-tabs">
       <button class="tab-btn active" onclick="gasTab('ronda06')" ${esDirector?"style='opacity:.4;cursor:not-allowed;pointer-events:none'":""}>🕕 Ronda 06:00</button>
       <button class="tab-btn" onclick="gasTab('tubos')" ${esDirector?"style='opacity:.4;cursor:not-allowed;pointer-events:none'":""}>🔵 Movimiento tubos</button>
@@ -1787,7 +1779,17 @@ async function guardarCargaTanque() {
 
 // ── STOCK ACTUAL ──────────────────────────────────────────────
 async function renderGasStock(c) {
-  c.innerHTML = '<div class="text-muted">Cargando stock...</div>';
+  // Recordatorio de stock mínimo
+  const recordatorio = `
+    <div style="background:rgba(192,57,43,.08);border:1px solid rgba(192,57,43,.35);
+                border-left:4px solid var(--red);border-radius:6px;padding:12px 16px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:4px">⚠ Recordatorio — Stock mínimo de oxígeno medicinal</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.6">
+        Se debe contar con respaldo para <strong style="color:var(--text)">DOCE (12) camas</strong> —
+        Fin de semana: <strong style="color:var(--text)">TREINTA Y SEIS (36) tubos</strong>.
+      </div>
+    </div>`;
+  c.innerHTML = recordatorio + '<div class="text-muted">Cargando stock...</div>';
   const data = await api({ action: 'getStockGas' });
 
   const stock = (data && data.ok !== false && data.stock) ? data.stock : {};
@@ -1898,7 +1900,7 @@ async function verificarPilaresHoy() {
   if (yaConfirmo) {
     // Ya confirmó hoy — ir directo al dashboard sin carteles
     navigate("dashboard");
-    setTimeout(() => verificarTrabajosEnCurso(), 2000);
+    setTimeout(() => verificarTrabajosEnCurso(), 1500);
   } else {
     // No confirmó todavía — mostrar pilares (luego traspaso)
     mostrarPilaresGestion();
@@ -1916,24 +1918,34 @@ async function verificarTrabajosEnCurso() {
   overlay.id = "alerta-encurso";
   overlay.style.cssText = "position:fixed;bottom:24px;right:24px;z-index:500;max-width:320px;width:90%;animation:pulseGlow 2s infinite;";
   overlay.innerHTML = `
-    <div style="background:linear-gradient(135deg,#1a3a5c,#0a5a8a);border:2px solid gold;border-radius:12px;
-                padding:16px 18px;box-shadow:0 0 20px rgba(255,215,0,0.4),0 4px 20px rgba(0,0,0,0.3)">
+    <div style="background:linear-gradient(160deg,#75aadb 0%,#ffffff 45%,#75aadb 100%);
+                border:3px solid #f6c700;border-radius:12px;
+                padding:16px 18px;box-shadow:0 0 24px rgba(246,199,0,0.5),0 4px 20px rgba(0,0,0,0.25)">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <span style="font-size:22px">⭐⭐⭐</span>
-        <div style="font-size:13px;font-weight:700;color:gold">
-          Tenés ${enCurso.length} trabajo${enCurso.length>1?"s":""} en curso
+        <span style="font-size:22px;filter:drop-shadow(0 0 4px rgba(246,199,0,0.8))">⭐⭐⭐</span>
+        <div>
+          <div style="font-size:13px;font-weight:800;color:#2c5f8a;letter-spacing:.03em">
+            TRABAJOS EN CURSO
+          </div>
+          <div style="font-size:11px;color:#4a4a4a">
+            Tenés <strong>${enCurso.length}</strong> trabajo${enCurso.length>1?"s":""} sin cerrar
+          </div>
         </div>
       </div>
-      <div style="font-size:12px;color:#c8e0f0;line-height:1.5;margin-bottom:12px">
-        Revisá los trabajos que ya realizaste y cerrá los que están listos.
+      <div style="font-size:12px;color:#2c2c2c;line-height:1.6;margin-bottom:12px;
+                  background:rgba(255,255,255,0.6);border-radius:6px;padding:8px 10px">
+        Revisá los trabajos que ya realizaste y <strong>cerrá los que están listos</strong>.
       </div>
       <div style="display:flex;gap:8px">
         <button onclick="document.getElementById('alerta-encurso').remove();navigate('cola');"
-          style="flex:1;padding:8px;background:gold;color:#1a1a1a;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">
-          Ver trabajos
+          style="flex:1;padding:8px;background:#f6c700;color:#1a1a1a;border:none;
+                 border-radius:6px;font-size:12px;font-weight:800;cursor:pointer;
+                 box-shadow:0 2px 8px rgba(246,199,0,0.4)">
+          ⭐ Ver trabajos
         </button>
         <button onclick="document.getElementById('alerta-encurso').remove()"
-          style="padding:8px 12px;background:rgba(255,255,255,0.1);color:#c8e0f0;border:1px solid rgba(255,255,255,0.2);border-radius:6px;font-size:12px;cursor:pointer">
+          style="padding:8px 12px;background:rgba(44,95,138,0.15);color:#2c5f8a;
+                 border:1px solid rgba(44,95,138,0.3);border-radius:6px;font-size:12px;cursor:pointer">
           Ahora no
         </button>
       </div>
@@ -2131,7 +2143,7 @@ async function mostrarTraspasoModal() {
       ` : "")}
 
       <div style="display:flex;gap:10px">
-        <button onclick="document.getElementById('traspaso-overlay').remove();navigate('dashboard');"
+        <button onclick="document.getElementById('traspaso-overlay').remove();navigate('dashboard');setTimeout(()=>verificarTrabajosEnCurso(),1500);"
           style="flex:1;padding:14px;background:var(--cyan);color:#fff;border:none;
                  border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">
           ✓ Iniciar turno
