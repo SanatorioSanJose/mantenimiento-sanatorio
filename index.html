@@ -423,7 +423,7 @@ tr:hover td { background: rgba(100,85,60,.06); }
 // ═══════════════════════════════════════════════════════════
 // CONFIG — REEMPLAZAR CON TU URL DE GOOGLE APPS SCRIPT
 // ═══════════════════════════════════════════════════════════
-const API_URL = "https://script.google.com/macros/s/AKfycbyUiEzitzu1ZH1VoKKuZ0EjC959PmLEOQIE3_HJIY6Wudpmq6kUl4FWYLFjdREBpd8G/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzYalMjz19RgS8s3lOm769d8jPyPNe7SRsyqE22Zg0u2AP8p55VN0cPdrti4PKFwkVz/exec";
 
 // Todos los PINs se validan contra Google Sheets — no hay PINs hardcodeados
 const PINS_DEMO = {}; // vacío — toda validación va al servidor
@@ -1979,14 +1979,24 @@ async function mostrarTraspasoModal() {
   const turnoActual = getTurnoActual();
   const anterior = getTurnoAnteriorYFecha();
 
-  // Cargar novedades del turno anterior con la fecha correcta
-  const data = await api({ action:"getNovedades" });
+  // Cargar novedades y trabajos propios del turno anterior
+  const [data, trabajosData] = await Promise.all([
+    api({ action:"getNovedades" }),
+    api({ action:"getTrabajosPropioss" })
+  ]);
 
   let novedadesAnterior = [];
   if (Array.isArray(data)) {
     novedadesAnterior = data.filter(n => {
       const fechaNov = normalizarFecha(n.Fecha);
-      return fechaNov === anterior.fecha && n.Turno === anterior.turno;
+      const horaNum = parseInt((normalizarHora(n.Hora)||"00:00").split(":")[0]);
+      const esAyer = fechaNov === anterior.fecha && n.Turno === anterior.turno;
+      // También incluir novedades del turno noche registradas hoy antes de las 07:00
+      const esHoyNoche = anterior.fechaAlternativa &&
+        fechaNov === anterior.fechaAlternativa &&
+        n.Turno === anterior.turno &&
+        horaNum < 7;
+      return esAyer || esHoyNoche;
     });
   }
   const turnoAnterior = anterior.turno;
@@ -2000,6 +2010,19 @@ async function mostrarTraspasoModal() {
 
   const hayNovedades = novedadesAnterior.length > 0;
 
+  // Trabajos propios del turno anterior
+  const trabajosAnterior = Array.isArray(trabajosData) ? trabajosData.filter(t => {
+    const fechaT = normalizarFecha(t.Fecha);
+    const horaNum = parseInt((t.Hora||"00:00").split(":")[0]);
+    const operarioDelTurno = novedadesAnterior.length > 0
+      ? novedadesAnterior.map(n => n.Operario)
+      : [];
+    // Mostrar trabajos del mismo período
+    const esAyer = fechaT === anterior.fecha;
+    const esHoyNoche = anterior.fechaAlternativa && fechaT === anterior.fechaAlternativa && horaNum < 7;
+    return (esAyer || esHoyNoche);
+  }) : [];
+
   overlay.innerHTML = `
     <div style="background:var(--navy2);border:1px solid var(--border);border-radius:12px;
                 padding:28px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto">
@@ -2012,27 +2035,50 @@ async function mostrarTraspasoModal() {
       </div>
 
       ${hayNovedades ? `
-        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
-          ${novedadesAnterior.map(n => `
-            <div style="background:var(--navy3);border-radius:8px;padding:12px 14px">
-              <div style="font-size:11px;color:var(--text3);margin-bottom:5px">
-                ${normalizarHora(n.Hora)||""} · <strong style="color:var(--text2)">${n.Operario||""}</strong> · <em>${n.Tipo||""}</em>
-              </div>
-              <div style="font-size:13px;line-height:1.5">${n.Novedad||""}</div>
-            </div>`).join("")}
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;margin-bottom:8px">📝 Novedades del turno</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            ${novedadesAnterior.map(n => `
+              <div style="background:var(--navy3);border-radius:8px;padding:12px 14px">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:5px">
+                  ${normalizarHora(n.Hora)||""} · <strong style="color:var(--text2)">${n.Operario||""}</strong> · <em>${n.Tipo||""}</em>
+                </div>
+                <div style="font-size:13px;line-height:1.5">${n.Novedad||""}</div>
+              </div>`).join("")}
+          </div>
         </div>
       ` : `
-        <div style="text-align:center;padding:30px 20px;margin-bottom:20px;
+        <div style="text-align:center;padding:20px;margin-bottom:12px;
                     background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.3);border-radius:8px">
-          <div style="font-size:32px;margin-bottom:12px">⚠️</div>
-          <div style="font-size:18px;font-weight:700;color:var(--red);margin-bottom:8px">
-            Turno ${turnoAnterior}<br>NO registró novedades
+          <div style="font-size:28px;margin-bottom:8px">⚠️</div>
+          <div style="font-size:16px;font-weight:700;color:var(--red);margin-bottom:6px">
+            Turno ${turnoAnterior} no registró novedades escritas
           </div>
-          <div style="font-size:13px;color:var(--text2)">
-            El turno anterior no dejó información sobre el estado del sanatorio.
+          <div style="font-size:12px;color:var(--text2)">
+            Verificar los trabajos realizados en el detalle de abajo.
           </div>
         </div>
       `}
+
+      ${trabajosAnterior.length > 0 ? `
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;margin-bottom:8px">🔨 Trabajos realizados (${trabajosAnterior.length})</div>
+          <div style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto">
+            ${trabajosAnterior.map(t => `
+              <div style="background:rgba(30,138,74,.06);border-left:3px solid var(--green);border-radius:0 6px 6px 0;padding:8px 12px">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:3px">
+                  ${t.Hora||""} · <strong>${t.Operario||""}</strong> · ${t.Sector||""}
+                </div>
+                <div style="font-size:12px">${t.Descripcion||""}</div>
+              </div>`).join("")}
+          </div>
+        </div>
+      ` : (!hayNovedades ? `
+        <div style="text-align:center;padding:12px;margin-bottom:12px;font-size:12px;color:var(--text3);
+                    border:1px dashed var(--border);border-radius:6px">
+          Sin trabajos propios registrados en este turno.
+        </div>
+      ` : "")}
 
       <div style="display:flex;gap:10px">
         <button onclick="document.getElementById('traspaso-overlay').remove();navigate('dashboard');"
@@ -2093,10 +2139,17 @@ async function renderTraspaso() {
       return fb.localeCompare(fa);
     });
 
-  // Mostrar turno anterior primero destacado
-  const novsAnterior = data.filter(n =>
-    normalizarFecha(n.Fecha) === anterior.fecha && n.Turno === anterior.turno
-  );
+  // Mostrar turno anterior — incluir novedades de noche registradas hoy antes de las 07:00
+  const novsAnterior = data.filter(n => {
+    const fechaNov = normalizarFecha(n.Fecha);
+    const horaNum = parseInt((normalizarHora(n.Hora)||"00:00").split(":")[0]);
+    const esAyer = fechaNov === anterior.fecha && n.Turno === anterior.turno;
+    const esHoyNoche = anterior.fechaAlternativa &&
+      fechaNov === anterior.fechaAlternativa &&
+      n.Turno === anterior.turno &&
+      horaNum < 7;
+    return esAyer || esHoyNoche;
+  });
 
   let html = `
     <div style="margin-bottom:20px">
@@ -3400,17 +3453,22 @@ function getTurnoActual() {
 }
 
 function getTurnoAnteriorYFecha() {
-  // Devuelve { turno, fecha } del turno que debe mostrar el traspaso
   const ahora = new Date();
   const h = ahora.getHours();
-  
-  // Turno Mañana (07-13): ver Noche de AYER
+
+  // Turno Mañana (07-13): ver Noche
+  // El turno noche puede haber registrado novedades AYER o HOY antes de las 07:00
   if (h >= 7 && h < 13) {
     const ayer = new Date(ahora);
     ayer.setDate(ayer.getDate() - 1);
     const d = String(ayer.getDate()).padStart(2,'0');
     const m = String(ayer.getMonth()+1).padStart(2,'0');
-    return { turno:"Noche", fecha: d+"/"+m+"/"+ayer.getFullYear(), label:"Noche (ayer)" };
+    return {
+      turno: "Noche",
+      fecha: d+"/"+m+"/"+ayer.getFullYear(),
+      fechaAlternativa: fechaHoy(), // también buscar en hoy antes de las 07:00
+      label: "Noche (ayer)"
+    };
   }
   // Turno Tarde (13-21): ver Mañana de HOY
   if (h >= 13 && h < 21) {
