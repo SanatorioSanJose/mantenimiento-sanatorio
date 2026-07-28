@@ -105,6 +105,10 @@ html, body { height: 100%; background: var(--navy); color: var(--text); font-fam
 .stat-chip { background: var(--navy3); border: 1px solid var(--border); border-radius: 8px; padding: 16px; text-align: center; animation: chipEntrada 0.5s ease-out both; }
 @keyframes chipEntrada { from { opacity:0; transform:translateY(-12px); } to { opacity:1; transform:translateY(0); } }
 @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+@keyframes pulseGlow {
+  0%,100% { box-shadow: 0 0 0 0 rgba(255,215,0,0); transform: scale(1); }
+  50% { box-shadow: 0 0 20px 4px rgba(255,215,0,0.5); transform: scale(1.02); }
+}
 @keyframes scaleIn { from { transform:scale(0.5); opacity:0; } to { transform:scale(1); opacity:1; } }
 .stat-chip:nth-child(1) { animation-delay:0s; }
 .stat-chip:nth-child(2) { animation-delay:0.1s; }
@@ -1284,6 +1288,14 @@ async function renderOxigeno() {
       <div class="section-sub">Oxígeno líquido · Tubos · Movimientos</div></div>
     </div>
     ${esDirector ? '<div class="alert alert-warning mb-8">👁 Modo solo lectura — Dirección. Solo podés consultar el stock actual.</div>' : ""}
+    <div style="background:rgba(192,57,43,.08);border:1px solid rgba(192,57,43,.35);border-left:4px solid var(--red);
+                border-radius:6px;padding:12px 16px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:4px">⚠ Recordatorio — Stock mínimo de oxígeno medicinal</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.6">
+        Se debe contar con respaldo de tubos de oxígeno medicinal para <strong style="color:var(--text)">DOCE (12) camas</strong>.
+        Fin de semana: <strong style="color:var(--text)">TREINTA Y SEIS (36) tubos</strong>.
+      </div>
+    </div>
     <div class="tabs" id="gas-tabs">
       <button class="tab-btn active" onclick="gasTab('ronda06')" ${esDirector?"style='opacity:.4;cursor:not-allowed;pointer-events:none'":""}>🕕 Ronda 06:00</button>
       <button class="tab-btn" onclick="gasTab('tubos')" ${esDirector?"style='opacity:.4;cursor:not-allowed;pointer-events:none'":""}>🔵 Movimiento tubos</button>
@@ -1886,10 +1898,48 @@ async function verificarPilaresHoy() {
   if (yaConfirmo) {
     // Ya confirmó hoy — ir directo al dashboard sin carteles
     navigate("dashboard");
+    setTimeout(() => verificarTrabajosEnCurso(), 2000);
   } else {
     // No confirmó todavía — mostrar pilares (luego traspaso)
     mostrarPilaresGestion();
   }
+}
+
+async function verificarTrabajosEnCurso() {
+  if (state.role !== "operario" && state.role !== "supervisor") return;
+  const data = await api({ action:"getPedidos" });
+  if (!Array.isArray(data)) return;
+  const enCurso = data.filter(p => p.Estado === "En curso" && p.OperarioAsignado === state.nombre);
+  if (enCurso.length === 0) return;
+
+  const overlay = document.createElement("div");
+  overlay.id = "alerta-encurso";
+  overlay.style.cssText = "position:fixed;bottom:24px;right:24px;z-index:500;max-width:320px;width:90%;animation:pulseGlow 2s infinite;";
+  overlay.innerHTML = `
+    <div style="background:linear-gradient(135deg,#1a3a5c,#0a5a8a);border:2px solid gold;border-radius:12px;
+                padding:16px 18px;box-shadow:0 0 20px rgba(255,215,0,0.4),0 4px 20px rgba(0,0,0,0.3)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span style="font-size:22px">⭐⭐⭐</span>
+        <div style="font-size:13px;font-weight:700;color:gold">
+          Tenés ${enCurso.length} trabajo${enCurso.length>1?"s":""} en curso
+        </div>
+      </div>
+      <div style="font-size:12px;color:#c8e0f0;line-height:1.5;margin-bottom:12px">
+        Revisá los trabajos que ya realizaste y cerrá los que están listos.
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="document.getElementById('alerta-encurso').remove();navigate('cola');"
+          style="flex:1;padding:8px;background:gold;color:#1a1a1a;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">
+          Ver trabajos
+        </button>
+        <button onclick="document.getElementById('alerta-encurso').remove()"
+          style="padding:8px 12px;background:rgba(255,255,255,0.1);color:#c8e0f0;border:1px solid rgba(255,255,255,0.2);border-radius:6px;font-size:12px;cursor:pointer">
+          Ahora no
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 12000);
 }
 
 async function confirmarPilaresYRegistrar() {
