@@ -1852,7 +1852,7 @@ async function renderGasStock(c) {
 
   const rondaInfo = ultimaRonda ? '<div style="font-size:11px;color:var(--text2);margin-bottom:12px">Última ronda: ' + ultimaRonda + '</div>' : '';
 
-  c.innerHTML = alertaHtml +
+  c.innerHTML = recordatorio + alertaHtml +
     '<div class="grid-2">' +
       '<div class="card">' +
         '<div class="card-title">📦 Stock de tubos</div>' +
@@ -2308,17 +2308,28 @@ async function mostrarTraspasoModal() {
   ]);
 
   let novedadesAnterior = [];
+  let novedadesFueraHorario = [];
   if (Array.isArray(data)) {
+    // Novedades dentro del horario del turno
     novedadesAnterior = data.filter(n => {
       const fechaNov = normalizarFecha(n.Fecha);
       const horaNum = parseInt((normalizarHora(n.Hora)||"00:00").split(":")[0]);
       const esAyer = fechaNov === anterior.fecha && n.Turno === anterior.turno;
-      // También incluir novedades del turno noche registradas hoy antes de las 07:00
       const esHoyNoche = anterior.fechaAlternativa &&
         fechaNov === anterior.fechaAlternativa &&
         n.Turno === anterior.turno &&
-        horaNum < 7;
+        horaNum < 7; // estrictamente dentro del turno noche
       return esAyer || esHoyNoche;
+    });
+    // Novedades fuera de horario (después de las 07:00 del día siguiente)
+    novedadesFueraHorario = data.filter(n => {
+      const fechaNov = normalizarFecha(n.Fecha);
+      const horaNum = parseInt((normalizarHora(n.Hora)||"00:00").split(":")[0]);
+      const esFueraHorario = anterior.fechaAlternativa &&
+        fechaNov === anterior.fechaAlternativa &&
+        n.Turno === anterior.turno &&
+        horaNum >= 7;
+      return esFueraHorario;
     });
   }
   const turnoAnterior = anterior.turno;
@@ -2341,7 +2352,7 @@ async function mostrarTraspasoModal() {
       : [];
     // Mostrar trabajos del mismo período
     const esAyer = fechaT === anterior.fecha;
-    const esHoyNoche = anterior.fechaAlternativa && fechaT === anterior.fechaAlternativa && horaNum < 7;
+    const esHoyNoche = anterior.fechaAlternativa && fechaT === anterior.fechaAlternativa && horaNum < 8;
     return (esAyer || esHoyNoche);
   }) : [];
 
@@ -2374,12 +2385,29 @@ async function mostrarTraspasoModal() {
                     background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.3);border-radius:8px">
           <div style="font-size:28px;margin-bottom:8px">⚠️</div>
           <div style="font-size:16px;font-weight:700;color:var(--red);margin-bottom:6px">
-            Turno ${turnoAnterior} no registró novedades escritas
+            Turno ${turnoAnterior} no registró novedades en su horario
           </div>
           <div style="font-size:12px;color:var(--text2)">
-            Verificar los trabajos realizados en el detalle de abajo.
+            No se registraron novedades entre las 21:00 y las 07:00.
+            ${novedadesFueraHorario.length > 0 ? "Se encontró un registro fuera de horario — ver Traspaso de Guardia." : ""}
           </div>
         </div>
+        ${novedadesFueraHorario.length > 0 ? `
+          <div style="margin-bottom:12px">
+            <div style="font-size:11px;font-weight:600;color:var(--amber);text-transform:uppercase;margin-bottom:6px">
+              ⚠ Registrado fuera del horario de turno
+            </div>
+            ${novedadesFueraHorario.map(n => `
+              <div style="background:rgba(196,122,0,.08);border-left:3px solid var(--amber);
+                          border-radius:0 6px 6px 0;padding:8px 12px;margin-bottom:4px">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:3px">
+                  ${normalizarHora(n.Hora)||""} · <strong>${n.Operario||""}</strong>
+                  <span style="color:var(--amber)"> · Registrado a las ${normalizarHora(n.Hora)} (fuera del turno)</span>
+                </div>
+                <div style="font-size:12px">${n.Novedad||""}</div>
+              </div>`).join("")}
+          </div>
+        ` : ""}
       `}
 
       ${trabajosAnterior.length > 0 ? `
@@ -2469,7 +2497,7 @@ async function renderTraspaso() {
     const esHoyNoche = anterior.fechaAlternativa &&
       fechaNov === anterior.fechaAlternativa &&
       n.Turno === anterior.turno &&
-      horaNum < 7;
+      horaNum < 8;
     return esAyer || esHoyNoche;
   });
 
