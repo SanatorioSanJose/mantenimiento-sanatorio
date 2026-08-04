@@ -449,7 +449,7 @@ tr:hover td { background: rgba(100,85,60,.06); }
 // ═══════════════════════════════════════════════════════════
 // CONFIG — REEMPLAZAR CON TU URL DE GOOGLE APPS SCRIPT
 // ═══════════════════════════════════════════════════════════
-const API_URL = "https://script.google.com/macros/s/AKfycbwc-3mwb9pPyAutWplKBrroi61o0N_WznYz1nn2VQYSyAtknowbju-Z4m45zEUVYwME/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbx7fK8agUdW94tXfjenyHwzBizgH_ECPnZS3sJJPa4uVXBK6kgaIaJ1_XveKNFHUrf7/exec";
 
 // Todos los PINs se validan contra Google Sheets — no hay PINs hardcodeados
 const PINS_DEMO = {}; // vacío — toda validación va al servidor
@@ -4197,16 +4197,19 @@ async function renderReqPersonalAdmin() {
     : `<div class="tbl-wrap"><table>
       <thead><tr><th>Fecha</th><th>Operario</th><th>Tipo</th><th>Desde</th><th>Hasta</th><th>Detalle</th><th>Estado</th><th>Acción</th></tr></thead>
       <tbody>${items.map(r=>`<tr>
-        <td style="font-size:12px">${r.Fecha||""}</td>
-        <td>${r.Operario||""}</td>
-        <td><span class="badge badge-info">${r.Tipo||""}</span></td>
-        <td style="font-size:12px">${r.FechaDesde||""}</td>
-        <td style="font-size:12px">${r.FechaHasta||""}</td>
-        <td style="font-size:12px;max-width:160px">${r.Detalle||""}</td>
-        <td><span class="badge ${r.Estado==="Aprobado"?"badge-done":r.Estado==="Rechazado"?"badge-urgent":"badge-pending"}">${r.Estado}</span></td>
+        <td style="font-size:12px">${normalizarFecha(r.Fecha)||r.Fecha||""}</td>
+        <td style="font-size:12px">${r.Operario||""}</td>
+        <td><span class="badge badge-info" style="font-size:10px">${r.Tipo||""}</span></td>
+        <td style="font-size:12px">${normalizarFecha(r.FechaDesde)||r.FechaDesde||"—"}</td>
+        <td style="font-size:12px">${normalizarFecha(r.FechaHasta)||r.FechaHasta||"—"}</td>
+        <td style="font-size:12px;max-width:200px">
+          ${r.Detalle||"—"}
+          ${r.DatosExtra ? `<div style="font-size:10px;color:var(--text2);margin-top:3px">${r.DatosExtra}</div>` : ""}
+        </td>
+        <td><span class="badge ${r.Estado==="Aprobado"?"badge-done":r.Estado==="Rechazado"?"badge-urgent":"badge-pending"}">${r.Estado||"Pendiente"}</span></td>
         <td>${r.Estado==="Pendiente" && state.role !== "director"
           ? `<button class='btn btn-success btn-sm' onclick="respReq('${r.ID}','Aprobado')">✓</button>
-             <button class='btn btn-danger btn-sm' onclick="respReq('${r.ID}','Rechazado')">✗</button>`
+             <button class='btn btn-danger btn-sm' style="margin-left:4px" onclick="respReq('${r.ID}','Rechazado')">✗</button>`
           : "—"}</td>
       </tr>`).join("")}</tbody></table></div>`;
 }
