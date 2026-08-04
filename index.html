@@ -3207,6 +3207,29 @@ function mostrarTarjetaAgradecimiento() {
 }
 
 
+
+async function asignarARoque(id, descripcion, servicio, urgencia) {
+  // 1. Asignar el pedido a Roque en el sistema
+  const res = await api({ action:"asignarPedido", id, operario:"Roque Cersar ALBARRACIN" });
+
+  if (res && res.ok !== false) {
+    // 2. Abrir WhatsApp con mensaje pre-escrito
+    const urgText = urgencia === "Alta" ? "🔴 URGENTE" : urgencia === "Media" ? "🟡 Media" : "🟢 Baja";
+    const texto = encodeURIComponent(
+      "🔧 *Trabajo asignado*\n" +
+      "Servicio: " + servicio + "\n" +
+      "Urgencia: " + urgText + "\n" +
+      "Descripción: " + descripcion
+    );
+    window.open("https://wa.me/541157103110?text=" + texto, "_blank");
+
+    showAlert("success", "✓ Pedido asignado a Roque. WhatsApp listo para enviar.");
+    renderCola();
+  } else {
+    showAlert("danger", "Error al asignar el pedido.");
+  }
+}
+
 // ── COLA DE PEDIDOS (OPERARIOS) ──────────────────────────────
 async function renderCola() {
   document.getElementById("content").innerHTML = `
@@ -3353,6 +3376,14 @@ function renderFilaCola(activos) {
               title="Escuchar pedido en voz alta">🔊</button>
             ${state.role !== "director" && p.Estado==="Pendiente" ? `
               <button class="btn btn-primary" style="font-size:11px;padding:6px 8px;display:block;width:100%;margin-bottom:5px" onclick="asumir('${p.ID}')">✋ Asumir</button>
+              ${state.role === "supervisor" ? `
+                <button style="font-size:10px;padding:5px 8px;display:block;width:100%;margin-bottom:5px;
+                               background:linear-gradient(135deg,#2d6a4f,#1a5c3a);color:#fff;border:none;
+                               border-radius:6px;cursor:pointer;font-weight:600"
+                  onclick="asignarARoque('${p.ID}','${(p.Descripcion||"").replace(/'/g,"").substring(0,100)}','${p.Servicio||""}','${p.Urgencia||""}')">
+                  📱 Asignar a Roque
+                </button>
+              ` : ""}
               <button class="btn btn-danger" style="font-size:11px;padding:6px 8px;display:block;width:100%" onclick="rechazarPedidoModal('${p.ID}','${(p.Descripcion||"").substring(0,30)}')">⚠ Sin cap.</button>
             ` : ""}
             ${state.role !== "director" && p.Estado==="En curso" ? `
