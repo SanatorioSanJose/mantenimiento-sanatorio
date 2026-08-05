@@ -2816,18 +2816,21 @@ function drawCharts(stats) {
   // ── CARGA POR OPERARIO — barras 3D ────────────────────────────
   const ctx3 = document.getElementById("chart-operario");
   const opData = stats.porOperario || {};
+  // Ordenar de mayor a menor (ranking decreciente)
+  const opEntries = Object.entries(opData).sort((a, b) => b[1] - a[1]);
+  const opDataSorted = Object.fromEntries(opEntries);
   if (ctx3) {
-    const opColors = Object.keys(opData).map((_,i) => COLORS[i % COLORS.length]);
+    const opColors = Object.keys(opDataSorted).map((_,i) => COLORS[i % COLORS.length]);
     const opBorders = opColors.map(c => darken(c, 25));
     new Chart(ctx3, {
       type: "bar",
       plugins: [shadow3DPlugin],
       ...animBar,
       data: {
-        labels: Object.keys(opData).map(n => n.split(" ")[0]),
+        labels: Object.keys(opDataSorted).map(n => n.split(" ")[0]),
         datasets: [{
           label: "Trabajos",
-          data: Object.values(opData),
+          data: Object.values(opDataSorted),
           backgroundColor: opColors.map(c => lighten(c, 8)),
           borderColor: opBorders,
           borderWidth: 2,
