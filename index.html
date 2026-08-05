@@ -2773,6 +2773,21 @@ function drawCharts(stats) {
 
   const COLORS = ["#1a6bb5","#c47a00","#1e8a4a","#c0392b","#0a8a9a","#7d3c98"];
 
+  // Mapeo de nombres a como se los conoce en el equipo
+  function apodoOperario(nombreCompleto) {
+    const n = (nombreCompleto || "").toUpperCase();
+    if (n.includes("AVALOS"))     return "Alejandro";
+    if (n.includes("GAVILAN"))    return "David";
+    if (n.includes("OJEDA"))      return "Pablo";
+    if (n.includes("GIMENEZ"))    return "Jose";
+    if (n.includes("RODRIGUEZ"))  return "Ezequiel";
+    if (n.includes("LIMACHE"))    return "Raul";
+    if (n.includes("ALBARRACIN")) return "Roque";
+    if (n.includes("ESPECHE"))    return "Sebastian";
+    // fallback: primer nombre
+    return (nombreCompleto || "").split(" ")[0];
+  }
+
   // Destruir charts existentes para que las animaciones se reproduzcan
   ["chart-estado","chart-operario","chart-rondas","chart-urgencia"].forEach(id => {
     const el = document.getElementById(id);
@@ -2827,7 +2842,7 @@ function drawCharts(stats) {
       plugins: [shadow3DPlugin],
       ...animBar,
       data: {
-        labels: Object.keys(opDataSorted).map(n => n.split(" ")[0]),
+        labels: Object.keys(opDataSorted).map(n => apodoOperario(n)),
         datasets: [{
           label: "Trabajos",
           data: Object.values(opDataSorted),
