@@ -2860,7 +2860,7 @@ function drawCharts(stats) {
           x: { ticks: { color: textColor, font:{size:9} }, grid: { display:false } },
           y: { ticks: { color: textColor, font:{size:10} }, grid: { color: gridColor } }
         },
-        plugins: { legend: { display:false }, tooltip: { callbacks: { title: (items) => Object.keys(opData)[items[0].dataIndex] } } }
+        plugins: { legend: { display:false }, tooltip: { callbacks: { title: (items) => Object.keys(opDataSorted)[items[0].dataIndex] } } }
       }
     });
   }
