@@ -2658,19 +2658,17 @@ async function renderDashboard() {
     document.getElementById("s-desglose").textContent = totalRes + " resueltos + " + totalPend + " pendientes + " + totalCurso + " en curso" + (sinCap > 0 ? " + " + sinCap + " sin cap." : "") + " + " + totalProp + " propios";
 
     // Calcular eficiencia consolidada
-    const eficienciaNum = totalInt > 0 ? Math.round((totalRes + totalProp) / totalInt * 100) : 0;
+    const eficienciaNum = totalInt > 0 ? Math.round((totalRes + totalProp) / totalInt * 1000) / 10 : 0;
     const efBar = document.getElementById("eficiencia-bar");
     const efValor = document.getElementById("eficiencia-valor");
     const efFill = document.getElementById("eficiencia-fill");
     const efMeta = document.getElementById("eficiencia-meta");
     if (efBar) {
-      efValor.textContent = eficienciaNum + "%";
-      // Color según meta
+      efValor.textContent = eficienciaNum.toFixed(1) + "%";
       const color = eficienciaNum >= 80 ? "#2ecc71" : eficienciaNum >= 60 ? "#f39c12" : "#e74c3c";
       efValor.style.color = color;
       efFill.style.background = "linear-gradient(90deg," + (eficienciaNum >= 80 ? "#1e8a4a,#2ecc71" : eficienciaNum >= 60 ? "#c47a00,#f39c12" : "#c0392b,#e74c3c") + ")";
-      efMeta.style.color = eficienciaNum >= 80 ? "var(--green)" : "var(--amber)";
-      efMeta.textContent = eficienciaNum >= 80 ? "✓ Meta cumplida (80%)" : "Meta: 80% — Actual: " + eficienciaNum + "%";
+      efMeta.textContent = "";
       setTimeout(() => { if (efFill) efFill.style.width = Math.min(eficienciaNum, 100) + "%"; }, 300);
     }
     document.getElementById("s-pend").textContent = stats.pendientes || 0;
