@@ -449,7 +449,7 @@ tr:hover td { background: rgba(100,85,60,.06); }
 // ═══════════════════════════════════════════════════════════
 // CONFIG — REEMPLAZAR CON TU URL DE GOOGLE APPS SCRIPT
 // ═══════════════════════════════════════════════════════════
-const API_URL = "https://script.google.com/macros/s/AKfycbx7fK8agUdW94tXfjenyHwzBizgH_ECPnZS3sJJPa4uVXBK6kgaIaJ1_XveKNFHUrf7/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwozoYXBfKcNnJXifh-BTKbsY4-dd_DGVsGJFcg-1xhSbvWXhs0bVx5WJoz17fncmpx/exec";
 
 // Todos los PINs se validan contra Google Sheets — no hay PINs hardcodeados
 const PINS_DEMO = {}; // vacío — toda validación va al servidor
@@ -890,6 +890,7 @@ function buildNav() {
         { id:"oxigeno", icon:"🫧", label:"Gestión de gases" },
         { id:"personal", icon:"👥", label:"Nómina personal" },
         { id:"req_personal_admin", icon:"📅", label:"Solicitudes del personal" },
+        { id:"comunicaciones", icon:"📧", label:"Registro de comunicaciones" },
         { id:"proveedores", icon:"📞", label:"Proveedores" },
         { id:"obleas", icon:"🏷", label:"Obleas / venc." },
       ]
@@ -919,6 +920,7 @@ function buildNav() {
       items: [
         { id:"personal", icon:"👥", label:"Nómina personal" },
         { id:"req_personal_admin", icon:"📅", label:"Solicitudes del personal" },
+        { id:"comunicaciones", icon:"📧", label:"Registro de comunicaciones" },
         { id:"proveedores", icon:"📞", label:"Proveedores" },
         { id:"obleas", icon:"🏷", label:"Obleas / venc." },
       ]
@@ -956,7 +958,8 @@ function navigate(page) {
     novedades:"Novedades de turno", personal:"Nómina del personal", proveedores:"Proveedores y servicios",
     obleas:"Obleas y vencimientos", servicios_admin:"Gestión de servicios / PINs",
     req_personal:"Solicitudes al personal",
-    req_personal_admin:"Solicitudes del personal", requerimientos_personal:"Mis solicitudes",
+    req_personal_admin:"Solicitudes del personal",
+    comunicaciones:"Registro de comunicaciones", requerimientos_personal:"Mis solicitudes",
     pedido_supervisor:"Crear pedido de trabajo",
     tablero_supervisor:"Tablero de novedades del jefe",
     oxigeno:"Gestión de gases — Oxígeno y tubos",
@@ -978,6 +981,7 @@ function navigate(page) {
     servicios_admin: renderServiciosAdmin,
     req_personal: renderRequerimientosPersonal,
     req_personal_admin: renderReqPersonalAdmin,
+    comunicaciones: renderComunicaciones,
     requerimientos_personal: renderRequerimientosPersonal,
     pedido_supervisor: renderPedidoSupervisor,
     tablero_supervisor: renderTableroSupervisor,
@@ -4267,6 +4271,205 @@ async function renderReqPersonalAdmin() {
              <button class='btn btn-danger btn-sm' style="margin-left:4px" onclick="respReq('${r.ID}','Rechazado')">✗</button>`
           : "—"}</td>
       </tr>`).join("")}</tbody></table></div>`;
+}
+
+
+// ── REGISTRO DE COMUNICACIONES ────────────────────────────────
+function renderComunicaciones() {
+  document.getElementById("content").innerHTML = `
+    <div class="section-header">
+      <div><div class="section-title">Registro de comunicaciones</div>
+      <div class="section-sub">Correos elevados · Informes · Presupuestos</div></div>
+    </div>
+    <div class="tabs mb-16">
+      <button class="tab-btn active" onclick="comTab('nuevo')">✉️ Nuevo registro</button>
+      <button class="tab-btn" onclick="comTab('historial')">📋 Historial</button>
+    </div>
+    <div id="com-content"></div>`;
+  comTab('nuevo');
+}
+
+function comTab(tab) {
+  document.querySelectorAll("#content .tab-btn").forEach((b,i) => b.classList.toggle("active", i === (tab==="nuevo"?0:1)));
+  const c = document.getElementById("com-content");
+  if (tab === 'nuevo') renderFormComunicacion(c);
+  else renderHistorialComunicaciones(c);
+}
+
+function renderFormComunicacion(c) {
+  c.innerHTML = `
+    <div class="card" style="max-width:640px">
+      <div class="card-title">✉️ Registrar comunicación enviada</div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Fecha del correo *</label>
+          <input id="com-fecha" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Hora del correo *</label>
+          <input id="com-hora" type="time">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Categoría *</label>
+        <select id="com-categoria">
+          <option value="Pedido de materiales">📦 Pedido de materiales</option>
+          <option value="Presupuesto">💰 Presupuesto</option>
+          <option value="Informe">📊 Informe</option>
+          <option value="Situación / Novedad">⚠️ Situación / Novedad</option>
+          <option value="Solicitud de autorización">✅ Solicitud de autorización</option>
+          <option value="Respuesta a consulta">💬 Respuesta a consulta</option>
+          <option value="Otro">📎 Otro</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Asunto del correo *</label>
+        <input id="com-asunto" type="text" placeholder="Ej: Solicitud de materiales eléctricos — Agosto 2026">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Destinatario principal (A:) *</label>
+        <input id="com-destinatario" type="text" placeholder="Ej: Gerencia / RRHH / Administración / nombre@sanatorio.com">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">En copia (CC:)</label>
+        <input id="com-copia" type="text" placeholder="Ej: Dirección Médica, Contabilidad">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Descripción de lo elevado *</label>
+        <textarea id="com-descripcion" placeholder="Describir brevemente el contenido del correo, qué se solicitó o informó..." style="min-height:90px"></textarea>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Costo estimado (si aplica)</label>
+          <input id="com-costo" type="text" placeholder="Ej: $45.000 / Sin costo">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Estado</label>
+          <select id="com-estado">
+            <option value="Enviado">📤 Enviado</option>
+            <option value="Con respuesta">✅ Con respuesta</option>
+            <option value="Sin respuesta">⏳ Sin respuesta</option>
+            <option value="Resuelto">✓ Resuelto</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nombre del archivo adjunto (para buscar después)</label>
+        <input id="com-archivo" type="text" placeholder="Ej: Presupuesto_Matafuegos_Jul2026.pdf">
+      </div>
+
+      <div id="com-msg"></div>
+      <button class="btn btn-primary" onclick="guardarComunicacion()">💾 Guardar registro</button>
+    </div>`;
+}
+
+async function guardarComunicacion() {
+  const fecha = document.getElementById("com-fecha").value;
+  const hora = document.getElementById("com-hora").value;
+  const asunto = document.getElementById("com-asunto").value.trim();
+  const destinatario = document.getElementById("com-destinatario").value.trim();
+  const descripcion = document.getElementById("com-descripcion").value.trim();
+
+  if (!fecha || !hora || !asunto || !destinatario || !descripcion) {
+    document.getElementById("com-msg").innerHTML = '<div class="alert alert-warning">⚠ Completar fecha, hora, asunto, destinatario y descripción.</div>';
+    return;
+  }
+
+  const datos = {
+    action: "nuevaComunicacion",
+    fecha, hora,
+    categoria: document.getElementById("com-categoria").value,
+    asunto,
+    destinatario,
+    copia: document.getElementById("com-copia").value,
+    descripcion,
+    costo: document.getElementById("com-costo").value,
+    estado: document.getElementById("com-estado").value,
+    archivo: document.getElementById("com-archivo").value,
+    operario: state.nombre,
+  };
+
+  const res = await api(datos);
+  if (res && res.ok !== false) {
+    document.getElementById("com-msg").innerHTML = '<div class="alert alert-success">✓ Comunicación registrada correctamente.</div>';
+    // Limpiar formulario
+    ["com-asunto","com-destinatario","com-copia","com-descripcion","com-costo","com-archivo"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
+  } else {
+    document.getElementById("com-msg").innerHTML = '<div class="alert alert-danger">✗ Error al guardar.</div>';
+  }
+}
+
+async function renderHistorialComunicaciones(c) {
+  c.innerHTML = '<div class="text-muted">Cargando historial...</div>';
+  const data = await api({ action:"getComunicaciones" });
+  if (!Array.isArray(data) || data.length === 0) {
+    c.innerHTML = '<div class="alert alert-info">No hay comunicaciones registradas aún.</div>';
+    return;
+  }
+
+  // Filtros
+  const categorias = [...new Set(data.map(d => d.Categoria).filter(Boolean))];
+
+  c.innerHTML = `
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+      <select id="com-filtro-cat" onchange="filtrarComunicaciones()" style="font-size:12px;padding:6px 10px">
+        <option value="">Todas las categorías</option>
+        ${categorias.map(cat => `<option value="${cat}">${cat}</option>`).join("")}
+      </select>
+      <input id="com-filtro-texto" type="text" placeholder="Buscar por asunto o destinatario..."
+        oninput="filtrarComunicaciones()" style="font-size:12px;padding:6px 10px;flex:1;min-width:200px">
+    </div>
+    <div id="com-tabla-wrap">
+      ${renderTablaComunicaciones(data)}
+    </div>`;
+
+  window._comData = data;
+}
+
+function filtrarComunicaciones() {
+  const cat = document.getElementById("com-filtro-cat")?.value || "";
+  const txt = (document.getElementById("com-filtro-texto")?.value || "").toLowerCase();
+  const filtrado = (window._comData || []).filter(d => {
+    const matchCat = !cat || d.Categoria === cat;
+    const matchTxt = !txt || (d.Asunto||"").toLowerCase().includes(txt) || (d.Destinatario||"").toLowerCase().includes(txt);
+    return matchCat && matchTxt;
+  });
+  const wrap = document.getElementById("com-tabla-wrap");
+  if (wrap) wrap.innerHTML = renderTablaComunicaciones(filtrado);
+}
+
+function renderTablaComunicaciones(data) {
+  if (!data.length) return '<div class="text-muted">No hay resultados.</div>';
+  return `<div class="tbl-wrap"><table>
+    <thead><tr>
+      <th>Fecha</th><th>Hora</th><th>Categoría</th><th>Asunto</th>
+      <th>Destinatario</th><th>CC</th><th>Descripción</th>
+      <th>Costo</th><th>Archivo</th><th>Estado</th>
+    </tr></thead>
+    <tbody>${data.slice().reverse().map(d => `<tr>
+      <td style="font-size:12px;white-space:nowrap">${d.Fecha||""}</td>
+      <td style="font-size:12px">${d.Hora||""}</td>
+      <td><span class="badge badge-info" style="font-size:10px">${d.Categoria||""}</span></td>
+      <td style="font-size:12px;max-width:180px">${d.Asunto||""}</td>
+      <td style="font-size:12px">${d.Destinatario||""}</td>
+      <td style="font-size:11px;color:var(--text2)">${d.Copia||"—"}</td>
+      <td style="font-size:12px;max-width:200px">${d.Descripcion||""}</td>
+      <td style="font-size:12px">${d.Costo||"—"}</td>
+      <td style="font-size:11px;color:var(--cyan)">${d.Archivo||"—"}</td>
+      <td><span class="badge ${d.Estado==="Resuelto"||d.Estado==="Con respuesta"?"badge-done":d.Estado==="Sin respuesta"?"badge-urgent":"badge-pending"}">${d.Estado||""}</span></td>
+    </tr>`).join("")}</tbody>
+  </table></div>`;
 }
 
 // ── REQUERIMIENTOS PERSONAL ───────────────────────────────────
