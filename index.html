@@ -2599,6 +2599,28 @@ async function renderDashboard() {
   const c = document.getElementById("content");
   c.innerHTML = `
     <div class="section-header"><div><div class="section-title">Dashboard</div><div class="section-sub">Resumen operativo — hoy</div></div></div>
+
+    <!-- Barra de eficiencia consolidada -->
+    <div id="eficiencia-bar" style="margin-bottom:12px;
+         background:var(--card);border:1px solid var(--border);border-radius:10px;
+         padding:14px 20px;animation:chipEntrada 0.5s ease-out both">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.08em">
+          Eficiencia consolidada del equipo
+        </div>
+        <div id="eficiencia-valor" style="font-size:24px;font-weight:800;color:var(--green)">—</div>
+      </div>
+      <div style="background:var(--navy3);border-radius:6px;height:12px;overflow:hidden">
+        <div id="eficiencia-fill" style="height:100%;width:0%;border-radius:6px;
+             transition:width 1.4s cubic-bezier(0.4,0,0.2,1);
+             background:linear-gradient(90deg,#1e8a4a,#2ecc71)"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:5px">
+        <div style="font-size:10px;color:var(--text3)">(Resueltos + Trabajos propios) ÷ Total intervenciones</div>
+        <div id="eficiencia-meta" style="font-size:10px;font-weight:600;color:var(--text2)">Meta: 80%</div>
+      </div>
+    </div>
+
     <div class="grid-4 mb-16" id="stats-chips">
       <div class="stat-chip" style="border-left:3px solid var(--cyan)">
         <div class="stat-num" style="color:var(--cyan)" id="s-intervenciones">—</div>
@@ -2634,6 +2656,23 @@ async function renderDashboard() {
     const totalInt = totalPed + totalProp;
     document.getElementById("s-intervenciones").textContent = totalInt;
     document.getElementById("s-desglose").textContent = totalRes + " resueltos + " + totalPend + " pendientes + " + totalCurso + " en curso" + (sinCap > 0 ? " + " + sinCap + " sin cap." : "") + " + " + totalProp + " propios";
+
+    // Calcular eficiencia consolidada
+    const eficienciaNum = totalInt > 0 ? Math.round((totalRes + totalProp) / totalInt * 100) : 0;
+    const efBar = document.getElementById("eficiencia-bar");
+    const efValor = document.getElementById("eficiencia-valor");
+    const efFill = document.getElementById("eficiencia-fill");
+    const efMeta = document.getElementById("eficiencia-meta");
+    if (efBar) {
+      efValor.textContent = eficienciaNum + "%";
+      // Color según meta
+      const color = eficienciaNum >= 80 ? "#2ecc71" : eficienciaNum >= 60 ? "#f39c12" : "#e74c3c";
+      efValor.style.color = color;
+      efFill.style.background = "linear-gradient(90deg," + (eficienciaNum >= 80 ? "#1e8a4a,#2ecc71" : eficienciaNum >= 60 ? "#c47a00,#f39c12" : "#c0392b,#e74c3c") + ")";
+      efMeta.style.color = eficienciaNum >= 80 ? "var(--green)" : "var(--amber)";
+      efMeta.textContent = eficienciaNum >= 80 ? "✓ Meta cumplida (80%)" : "Meta: 80% — Actual: " + eficienciaNum + "%";
+      setTimeout(() => { if (efFill) efFill.style.width = Math.min(eficienciaNum, 100) + "%"; }, 300);
+    }
     document.getElementById("s-pend").textContent = stats.pendientes || 0;
     document.getElementById("s-enc").textContent = stats.enCurso || 0;
     document.getElementById("s-res").textContent = stats.resueltos || 0;
